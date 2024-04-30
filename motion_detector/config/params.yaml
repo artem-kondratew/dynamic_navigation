@@ -1,0 +1,17 @@
+motion_detector:
+    ros__parameters:
+        input_topic: /motion_detector/input                     # topic with rgb, depth, mask and odom
+        camera_info_topic: /rtabmap/motion_detector/camera_info # topic with camera info
+        rgb_topic: /rtabmap/motion_detector/rgb                 # topic for publishing rgb
+        depth_topic: /rtabmap/motion_detector/depth             # topic for publishing depth
+        mask_topic: /rtabmap/motion_detector/mask               # topic for publishing segmentation mask
+        odom_topic: /rtabmap/motion_detector/odom               # topic for publishing odometry
+        dynamic_detector_topic: /dynamic_detector/input         # topic with input msg for dynamic_detector node
+        create_mask: True                                       # node creates segmentation mask if True
+        gpu_yolo_model: yolov8m-seg.engine                      # yolov8 model for running on gpu
+        cpu_yolo_model: yolov8n-seg.pt                          # yolov8 model for running on cpu
+
+keypoints_visualizer:
+    ros__parameters:
+        input_topic: /rtabmap/to_visualizer                     # input topic with images and keypoints
+        output_topic: /motion_detector/visualizer               # output_topic with keypoints images        

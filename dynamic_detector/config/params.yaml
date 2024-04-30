@@ -1,6 +1,6 @@
 dynamic_detector:
     ros__parameters:
-        input_topic: /rtabmap/dynamic_detector/input               # topic with depth, mask and odom
+        input_topic: /dynamic_detector/input                       # topic with depth, mask and odom
         pc2_topic: /dynamic_detector/point_cloud2                  # topic with pc2 for visualizing dynamic obstacles
         box_topic: /dynamic_detector/box                           # topic with 3D bounding box for visualizing dynamic obstacles
         obstacles_fp_topic: /dynamic_detector/obstacles_footprints # topic with dynamic obstacles footpints for tracking node
