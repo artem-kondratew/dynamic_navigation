@@ -10,6 +10,8 @@ find_package(cv_bridge REQUIRED)
 find_package(dynamic_nav_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(image_geometry REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(nav2_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rtabmap_msgs REQUIRED)
@@ -48,6 +50,7 @@ ament_target_dependencies(obstacles_tracker
     dynamic_nav_msgs
     geometry_msgs
     nav_msgs
+    nav2_msgs
     rclcpp
     tf2_geometry_msgs
     tf2_ros
