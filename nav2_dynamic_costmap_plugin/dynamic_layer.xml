@@ -1,0 +1,5 @@
+<library path="nav2_dynamic_costmap_plugin_core">
+  <class name="nav2_dynamic_costmap_plugin/DynamicLayer" type="nav2_dynamic_costmap_plugin::DynamicLayer" base_class_type="nav2_costmap_2d::Layer">
+    <description>My plugin for dynamic obstacles</description>
+  </class>
+</library>
