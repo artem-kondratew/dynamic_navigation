@@ -9,13 +9,18 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(OpenCV REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rtabmap_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
+include_directories(${OpenCV_INCLUDE_DIRS})
+
 add_executable(data_synchronizer
     src/data_synchronizer.cpp
 )
+
+target_link_libraries(data_synchronizer ${OpenCV_LIBS})
 
 ament_target_dependencies(data_synchronizer message_filters nav_msgs rclcpp rtabmap_msgs sensor_msgs)
 

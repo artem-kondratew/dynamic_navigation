@@ -1,6 +1,10 @@
 #include <iostream>
 #include <memory>
 
+#include <opencv4/opencv2/core.hpp>
+#include <opencv4/opencv2/imgproc.hpp>
+#include <opencv4/opencv2/highgui.hpp>
+
 #include <rclcpp/rclcpp.hpp>
 #include <nav_msgs/msg/odometry.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
@@ -18,10 +22,14 @@ using std::placeholders::_1;
 
 class DataSyncronizer : public rclcpp::Node {
 private:
-    using approximate_policy = message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::CameraInfo,
+    using odom_policy = message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::CameraInfo,
     sensor_msgs::msg::Image, sensor_msgs::msg::Image, nav_msgs::msg::Odometry>;
+
+    using no_odom_policy = message_filters::sync_policies::ApproximateTime<sensor_msgs::msg::CameraInfo,
+    sensor_msgs::msg::Image, sensor_msgs::msg::Image>;
     
-    std::unique_ptr<message_filters::Synchronizer<approximate_policy>> sync_;
+    std::unique_ptr<message_filters::Synchronizer<odom_policy>> odom_sync_;
+    std::unique_ptr<message_filters::Synchronizer<no_odom_policy>> no_odom_sync_;
 
     message_filters::Subscriber<sensor_msgs::msg::CameraInfo> camera_info_sub_;
     message_filters::Subscriber<sensor_msgs::msg::Image> rgb_sub_;
@@ -34,11 +42,16 @@ public:
     DataSyncronizer();
 
 private:
-    void callback(
+    void odomCallback(
         const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info,
         const sensor_msgs::msg::Image::ConstSharedPtr rgb,
         const sensor_msgs::msg::Image::ConstSharedPtr depth,
         const nav_msgs::msg::Odometry::ConstSharedPtr odom
+    );
+    void callback(
+        const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info,
+        const sensor_msgs::msg::Image::ConstSharedPtr rgb,
+        const sensor_msgs::msg::Image::ConstSharedPtr depth
     );
 };
 
@@ -49,32 +62,41 @@ DataSyncronizer::DataSyncronizer() : Node("data_synchronizer") {
     this->declare_parameter("depth_input", "");
     this->declare_parameter("odom_input", "");
     this->declare_parameter("output", "");
+    this->declare_parameter("use_odom", true);
 
     std::string camera_info_topic = this->get_parameter("camera_info_input").as_string();
     std::string rgb_topic = this->get_parameter("rgb_input").as_string();
     std::string depth_topic = this->get_parameter("depth_input").as_string();
     std::string odom_topic = this->get_parameter("odom_input").as_string();
     std::string output_topic = this->get_parameter("output").as_string();
+    bool use_odom = this->get_parameter("use_odom").as_bool();
 
     RCLCPP_INFO(this->get_logger(), "camera_info_topic: '%s'", camera_info_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "rgb_topic: '%s'", rgb_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "depth_topic: '%s'", depth_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "odom_topic: '%s'", odom_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "output_topic: '%s'", output_topic.c_str());
+    RCLCPP_INFO(this->get_logger(), "use_odom: '%s'", (use_odom ? "true" : "false"));
 
     camera_info_sub_.subscribe(this, camera_info_topic);
     rgb_sub_.subscribe(this, rgb_topic);
     depth_sub_.subscribe(this, depth_topic);
-    odom_sub_.subscribe(this, odom_topic);
+    if (use_odom) {
+        odom_sub_.subscribe(this, odom_topic);
+        odom_sync_.reset(new message_filters::Synchronizer<odom_policy>(odom_policy(10), camera_info_sub_, rgb_sub_, depth_sub_, odom_sub_));
+        odom_sync_->registerCallback(std::bind(&DataSyncronizer::odomCallback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
+    }
+    else {
+        no_odom_sync_.reset(new message_filters::Synchronizer<no_odom_policy>(no_odom_policy(10), camera_info_sub_, rgb_sub_, depth_sub_));
+        no_odom_sync_->registerCallback(std::bind(&DataSyncronizer::callback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3));
 
-    sync_.reset(new message_filters::Synchronizer<approximate_policy>(approximate_policy(10), camera_info_sub_, rgb_sub_, depth_sub_, odom_sub_));
-    sync_->registerCallback(std::bind(&DataSyncronizer::callback, this, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3, std::placeholders::_4));
-
+    }
+    
     output_pub_ = this->create_publisher<rtabmap_msgs::msg::MotionDetectorData>(output_topic, 10);
 }
 
 
-void DataSyncronizer::callback(const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info, const sensor_msgs::msg::Image::ConstSharedPtr rgb,
+void DataSyncronizer::odomCallback(const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info, const sensor_msgs::msg::Image::ConstSharedPtr rgb,
                                const sensor_msgs::msg::Image::ConstSharedPtr depth, const nav_msgs::msg::Odometry::ConstSharedPtr odom) {
     auto msg = rtabmap_msgs::msg::MotionDetectorData();
     msg.camera_info = *camera_info;
@@ -84,8 +106,40 @@ void DataSyncronizer::callback(const sensor_msgs::msg::CameraInfo::ConstSharedPt
 
     output_pub_->publish(msg);
 
-    RCLCPP_INFO(this->get_logger(), "sync created: %u:%u %u:%u %u:%u", msg.rgb.header.stamp.sec, msg.rgb.header.stamp.nanosec,
+    size_t w = msg.rgb.width;
+    size_t h = msg.rgb.height;
+    size_t size = w * h;
+    cv::Mat img(h, w, CV_8UC3);
+    std::memcpy(img.data, msg.rgb.data.data(), sizeof(uint8_t) * size * 3);
+
+    cv::imshow("data", img);
+    cv::waitKey(1);
+
+    RCLCPP_INFO(this->get_logger(), "sync with odom created: %u:%u %u:%u %u:%u", msg.rgb.header.stamp.sec, msg.rgb.header.stamp.nanosec,
     msg.depth.header.stamp.sec, msg.depth.header.stamp.nanosec, msg.odom.header.stamp.sec, msg.odom.header.stamp.nanosec);
+}
+
+
+void DataSyncronizer::callback(const sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info, const sensor_msgs::msg::Image::ConstSharedPtr rgb,
+                               const sensor_msgs::msg::Image::ConstSharedPtr depth) {
+    auto msg = rtabmap_msgs::msg::MotionDetectorData();
+    msg.camera_info = *camera_info;
+    msg.rgb = *rgb;
+    msg.depth = *depth;
+
+    output_pub_->publish(msg);
+
+    size_t w = msg.rgb.width;
+    size_t h = msg.rgb.height;
+    size_t size = w * h;
+    cv::Mat img(h, w, CV_8UC3);
+    std::memcpy(img.data, msg.rgb.data.data(), sizeof(uint8_t) * size * 3);
+
+    cv::imshow("data", img);
+    cv::waitKey(1);
+
+    RCLCPP_INFO(this->get_logger(), "sync without odom created: %u:%u %u:%u", msg.rgb.header.stamp.sec, msg.rgb.header.stamp.nanosec,
+    msg.depth.header.stamp.sec, msg.depth.header.stamp.nanosec);
 }
 
 

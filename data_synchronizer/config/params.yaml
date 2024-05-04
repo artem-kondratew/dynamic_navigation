@@ -5,3 +5,4 @@ data_synchronizer:
         depth_input: /camera/depth/image_raw   # input topic with depth image
         odom_input: /odom                      # input topic with odom
         output: /motion_detector/input         # output topic for communication with motion_detector node
+        use_odom: true                         # sync odom if true
