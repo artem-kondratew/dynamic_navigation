@@ -1,1 +1,1 @@
-DynamicObstacle[] obstacles
+CostmapCircle[] obstacles
