@@ -22,7 +22,8 @@ setup(
     entry_points={
         'console_scripts': [
             'motion_detector = motion_detector.motion_detector:main',
-            'keypoints_visualizer = motion_detector.keypoints_visualizer:main'
+            'keypoints_visualizer = motion_detector.keypoints_visualizer:main',
+            'fake_fast_detector = motion_detector.fake_fast_detector:main'
         ],
     },
 )

@@ -40,9 +40,9 @@ class MotionDetector(Node):
         yolo_model_type_ = self.get_parameter('gpu_yolo_model').value if cuda_is_available() else self.get_parameter('cpu_yolo_model').value
         self.model_ = Yolo(yolo_model=yolo_model_type_, classes=classes_list)
         self.h, self.w = (480, 640)
-        self.model_.run(np.zeros((480, 640, 3), dtype='uint8'))
+        self.model_.run(np.zeros((self.h, self.w, 3), dtype='uint8'))
+        self.empty_mask_ = np.zeros((self.h, self.w, 1), dtype='uint8')
         self.get_logger().info('model initialized')
-        self.empty_mask_ = np.zeros((480, 640, 1), dtype='uint8')
 
     def get_boxes_coordinates(self, boxes):
         x = []
