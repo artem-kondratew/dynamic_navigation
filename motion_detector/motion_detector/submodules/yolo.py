@@ -10,15 +10,12 @@ from ultralytics import YOLO as _YOLO
 
 class Yolo():
 
-    def __init__(self, yolo_type, classes=None):
+    def __init__(self, yolo_model : str, classes=None):
         self.gpu = torch.cuda.is_available()
         if self.gpu:
-            try:
-                path = os.path.join(get_package_share_directory('motion_detector'), 'config', yolo_type)
-            except:
-                exit(-1)
+            path = os.path.join(get_package_share_directory('motion_detector'), 'config', yolo_model + '.engine')
         else:
-            path = os.path.join(get_package_share_directory('motion_detector'), 'config', yolo_type)
+            path = os.path.join(get_package_share_directory('motion_detector'), 'config', yolo_model + '.pt')
         print(f'model path: {path}')
         self.model = _YOLO(path)
         self.classes = classes if classes != None else [0]
