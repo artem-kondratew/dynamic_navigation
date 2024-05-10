@@ -5,13 +5,15 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
 endif()
 
-# find dependencies
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
+
 find_package(ament_cmake REQUIRED)
+find_package(cv_bridge REQUIRED)
+find_package(dynamic_nav_msgs REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(rclcpp REQUIRED)
-find_package(rtabmap_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
@@ -20,9 +22,15 @@ add_executable(data_synchronizer
     src/data_synchronizer.cpp
 )
 
-target_link_libraries(data_synchronizer ${OpenCV_LIBS})
+add_executable(yolo_dispatcher
+    src/yolo_dispatcher.cpp
+)
 
-ament_target_dependencies(data_synchronizer message_filters nav_msgs rclcpp rtabmap_msgs sensor_msgs)
+target_link_libraries(data_synchronizer ${OpenCV_LIBS})
+target_link_libraries(yolo_dispatcher ${OpenCV_LIBS})
+
+ament_target_dependencies(data_synchronizer dynamic_nav_msgs message_filters nav_msgs rclcpp sensor_msgs)
+ament_target_dependencies(yolo_dispatcher cv_bridge dynamic_nav_msgs nav_msgs rclcpp sensor_msgs)
 
 install(DIRECTORY
     src config
@@ -31,6 +39,7 @@ install(DIRECTORY
 
 install(TARGETS
     data_synchronizer
+    yolo_dispatcher
     DESTINATION lib/${PROJECT_NAME}
 )
 
