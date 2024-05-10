@@ -142,6 +142,7 @@ void YoloDispatcher::yoloCallback(dynamic_nav_msgs::msg::YoloData::SharedPtr msg
 
     auto pub_e = std::chrono::system_clock::now();
     auto end_timer = std::chrono::system_clock::now();
+    
     auto dt_dilate = std::chrono::duration_cast<std::chrono::milliseconds>(dilate_e - dilate_s).count();
     auto dt_depth = std::chrono::duration_cast<std::chrono::milliseconds>(depth_e - depth_s).count();
     auto dt_pub = std::chrono::duration_cast<std::chrono::milliseconds>(pub_e - pub_s).count();
