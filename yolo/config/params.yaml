@@ -1,4 +1,4 @@
-motion_detector:
+yolo:
     ros__parameters:
         input_topic: /yolo/input                                # topic with rgb, depth and odom
         output_topic: /yolo/output                              # topic with rgb, depth, mask, odom and bounding boxes
@@ -9,4 +9,4 @@ motion_detector:
 keypoints_visualizer:
     ros__parameters:
         input_topic: /rtabmap/to_visualizer                     # input topic with images and keypoints
-        output_topic: /motion_detector/visualizer               # output_topic with keypoints images        
+        output_topic: /rtabmap/keypoints/visualizer             # output_topic with keypoints images        
