@@ -22,23 +22,30 @@ add_executable(data_synchronizer
     src/data_synchronizer.cpp
 )
 
+add_executable(fake_realsense
+    src/fake_realsense.cpp
+)
+
 add_executable(yolo_dispatcher
     src/yolo_dispatcher.cpp
 )
 
 target_link_libraries(data_synchronizer ${OpenCV_LIBS})
+target_link_libraries(fake_realsense ${OpenCV_LIBS})
 target_link_libraries(yolo_dispatcher ${OpenCV_LIBS})
 
 ament_target_dependencies(data_synchronizer dynamic_nav_msgs message_filters nav_msgs rclcpp sensor_msgs)
+ament_target_dependencies(fake_realsense cv_bridge nav_msgs rclcpp sensor_msgs)
 ament_target_dependencies(yolo_dispatcher cv_bridge dynamic_nav_msgs nav_msgs rclcpp sensor_msgs)
 
 install(DIRECTORY
-    src config
+    src config launch
     DESTINATION share/${PROJECT_NAME}
 )
 
 install(TARGETS
     data_synchronizer
+    fake_realsense
     yolo_dispatcher
     DESTINATION lib/${PROJECT_NAME}
 )
