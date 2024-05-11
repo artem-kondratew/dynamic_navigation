@@ -35,6 +35,7 @@ private:
     image_geometry::PinholeCameraModel camera_model_;
     float range_max_;
     std::string camera_link_optical_frame_;
+    bool realsense_;
 
     std::vector<geometry_msgs::msg::Point> box_points_;
 
@@ -70,6 +71,7 @@ DynamicDetector::DynamicDetector() : Node("dynamic_detector") {
     this->declare_parameter("bb_image_topic", "");
     this->declare_parameter("range_max", 0.0);
     this->declare_parameter("camera_link_optical_frame", "");
+    this->declare_parameter("realsense", false);
 
     std::string input_topic = this->get_parameter("input_topic").as_string();
     std::string pc2_topic = this->get_parameter("pc2_topic").as_string();
@@ -78,6 +80,7 @@ DynamicDetector::DynamicDetector() : Node("dynamic_detector") {
     std::string bb_image_topic = this->get_parameter("bb_image_topic").as_string();
     range_max_ = this->get_parameter("range_max").as_double();
     camera_link_optical_frame_ = this->get_parameter("camera_link_optical_frame").as_string();
+    realsense_ = this->get_parameter("realsense").as_bool();
 
     RCLCPP_INFO(this->get_logger(), "input_topic: '%s'", input_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "pc2_topic: '%s'", pc2_topic.c_str());
@@ -86,6 +89,7 @@ DynamicDetector::DynamicDetector() : Node("dynamic_detector") {
     RCLCPP_INFO(this->get_logger(), "bb_image_topic: '%s'", bb_image_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "range_max: '%f'", range_max_);
     RCLCPP_INFO(this->get_logger(), "camera_link_optical_frame: '%s'", camera_link_optical_frame_.c_str());
+    RCLCPP_INFO(this->get_logger(), "realsense: '%s'", realsense_ ? "true" : "false");
 
 
     input_sub_ = this->create_subscription<dynamic_nav_msgs::msg::DetectorData>(input_topic, 10, std::bind(&DynamicDetector::callback, this, _1));
@@ -121,20 +125,48 @@ cv::Mat DynamicDetector::extractDynamicDepth(const cv::Mat& depth, cv::Mat& mask
     cv::erode(mask, mask_eroded, kernel, cv::Point(-1, -1), 1);
 
     // extract dynamic_depth only
-    cv::Mat dynamic_depth = depth.clone(); // depth only if mask pixel is 0
-    uint8_t* mask_data = static_cast<uint8_t*>(mask.data); // get pointer to mask_dilated data
-    float* dynamic_depth_data = reinterpret_cast<float*>(dynamic_depth.data); // get pointer to dynamic_depth data
-    __m256i uint32_zeros = _mm256_set1_epi32(0);
-    __m256 float_zeros = _mm256_set1_ps(0.0);
-    for (int i = 0; i < dynamic_depth.rows * dynamic_depth.cols; i += 8) {
-        __m128i reg_mask = _mm_loadu_si128((__m128i*)(mask_data + i)); // load mask to 8-bit integer avx
-        __m256i reg_mask_epi32 = _mm256_cvtepu8_epi32(reg_mask); // convert 8-bit integer mask avx to 32-bit integer
-        __m256i cmp_res = _mm256_cmpeq_epi32(reg_mask_epi32, uint32_zeros); // compare 32-bit integer mask avx with zeros
-        _mm256_maskstore_ps(dynamic_depth_data + i, cmp_res, float_zeros); // set static_depth to 0 if cmp_res is 0 (mask is zero)
-        // explanation:
-        // if (mask_data[i] == 0) {
-        //     dynamic_depth_data[i] = 0.0;
-        // }
+    cv::Mat dynamic_depth;
+    if (!realsense_) {
+        dynamic_depth = depth.clone(); // depth only if mask pixel is 0
+        uint8_t* mask_data = static_cast<uint8_t*>(mask.data); // get pointer to mask_dilated data
+        float* dynamic_depth_data = reinterpret_cast<float*>(dynamic_depth.data); // get pointer to dynamic_depth data
+        __m256i uint32_zeros = _mm256_set1_epi32(0);
+        __m256 float_zeros = _mm256_set1_ps(0.0);
+        for (int i = 0; i < dynamic_depth.rows * dynamic_depth.cols; i += 8) {
+            __m128i reg_mask = _mm_loadu_si128((__m128i*)(mask_data + i)); // load mask to 8-bit integer avx
+            __m256i reg_mask_epi32 = _mm256_cvtepu8_epi32(reg_mask); // convert 8-bit integer mask avx to 32-bit integer
+            __m256i cmp_res = _mm256_cmpeq_epi32(reg_mask_epi32, uint32_zeros); // compare 32-bit integer mask avx with zeros
+            _mm256_maskstore_ps(dynamic_depth_data + i, cmp_res, float_zeros); // set static_depth to 0 if cmp_res is 0 (mask is zero)
+            // explanation:
+            // if (mask_data[i] == 0) {
+            //     dynamic_depth_data[i] = 0.0;
+            // }
+        }
+    }
+    else {
+        dynamic_depth = cv::Mat::zeros({int(depth.cols), int(depth.rows)}, CV_32FC1);
+        uint8_t* mask_dilated_data = static_cast<uint8_t*>(mask.data); // get pointer to mask_dilated data
+        uint16_t* realsense_depth_data = reinterpret_cast<uint16_t*>(depth.data); // get pointer to static_depth data
+        float* float_depth_data = reinterpret_cast<float*>(dynamic_depth.data); // get pointer to float_depth data
+        __m256i uint32_zeros = _mm256_set1_epi16(0);
+        __m256 scale = _mm256_set1_ps(0.001);
+        for (int i = 0; i < depth.rows * depth.cols; i += 8) {
+            __m128i reg_mask = _mm_loadu_si128((__m128i*)(mask_dilated_data + i)); // load mask to 8-bit uint avx
+            __m128i reg_depth = _mm_loadu_si128((__m128i*)(realsense_depth_data + i)); // load depth to 16-bit uint avx
+            __m256i reg_mask_epi32 = _mm256_cvtepu8_epi32(reg_mask); // convert 8-bit uint mask avx to 32-bit integer
+            __m256i reg_depth_epi32 = _mm256_cvtepu16_epi32(reg_depth); // convert 16-bit uint depth avx to 32-bit integer
+            __m256i reg_cmp_res = _mm256_cmpeq_epi32(reg_mask_epi32, uint32_zeros); // compare 32-bit integer mask avx with zeros
+            reg_cmp_res = _mm256_srli_epi32(reg_cmp_res, 31); // -1 -> 1, 0 -> 0
+            __m256 reg_cmp_res_float = _mm256_cvtepi32_ps(reg_cmp_res); // convert compare results from 32-bit integer to float
+            __m256 reg_depth_float = _mm256_cvtepi32_ps(reg_depth_epi32); // convert 32-bit integer depth avx to float
+            __m256 reg_static_depth = _mm256_mul_ps(reg_depth_float, reg_cmp_res_float); // if cmp is zero than depth is zero
+            reg_static_depth = _mm256_mul_ps(reg_static_depth, scale); // set scale from uint16 to float (rep 118)
+            _mm256_storeu_ps(float_depth_data + i, reg_static_depth); // store static depth
+            // explanation:
+            // if (mask_data[i] != 0) {
+            //     dynamic_depth_data[i] = 0.0;
+            // }
+        }
     }
 
     for (size_t i = 0; i < image_points.size(); i++) {
@@ -412,25 +444,16 @@ void DynamicDetector::callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr ms
     auto unpack_s = std::chrono::system_clock::now();
 
     size_t obstacles_num = msg->boxes.size() / 4;
-    RCLCPP_INFO(this->get_logger(), "%ld obstacle(s) detected", obstacles_num);
 
     cv_bridge::CvImagePtr rgb = cv_bridge::toCvCopy(msg->rgb);
     cv::Mat depth = cv_bridge::toCvCopy(msg->depth)->image;
     cv::Mat mask = cv_bridge::toCvCopy(msg->mask)->image;
-
-    size_t w = rgb->image.cols;
-    size_t h = rgb->image.rows;
-    size_t size = w * h;
 
     std::vector<uint64_t> boxes = msg->boxes;
 
     camera_model_.fromCameraInfo(msg->camera_info);
 
     auto unpack_e = std::chrono::system_clock::now();
-
-    // for (size_t i = 0; i < obstacles_num; i++) {
-
-    // }
 
     std::vector<std::vector<cv::Point>> image_points = setImagePoints(boxes);
     auto dds = std::chrono::system_clock::now();
@@ -467,7 +490,7 @@ void DynamicDetector::callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr ms
     auto dt_pub = std::chrono::duration_cast<std::chrono::milliseconds>(pub_e - pub_s).count();
     auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(end_timer - start_timer).count();
     
-    RCLCPP_INFO(this->get_logger(), "dt = %ld; dt_unpack = %ld; dt_dd = %ld; f = %ld; dt_pub = %ld;", dt, dt_unpack, dt_dd, f, dt_pub);
+    RCLCPP_INFO(this->get_logger(), "%ld obstacle(s) detected; dt = %ld; dt_unpack = %ld; dt_dd = %ld; f = %ld; dt_pub = %ld;", obstacles_num, dt, dt_unpack, dt_dd, f, dt_pub);
 }
 
 
