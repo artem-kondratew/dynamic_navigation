@@ -91,7 +91,7 @@ void YoloDispatcher::yoloCallback(dynamic_nav_msgs::msg::YoloData::SharedPtr msg
     auto dilate_s = std::chrono::system_clock::now();
 
     // dilate mask for rtabmap
-    cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
+    static const cv::Mat kernel = cv::getStructuringElement(cv::MORPH_RECT, cv::Size(5, 5));
     auto mask = cv_bridge::toCvCopy(msg->mask);
     auto mask_dilated = cv_bridge::toCvCopy(msg->mask);
     cv::dilate(mask->image, mask_dilated->image, kernel, cv::Point(-1, -1), 2);
@@ -142,12 +142,13 @@ void YoloDispatcher::yoloCallback(dynamic_nav_msgs::msg::YoloData::SharedPtr msg
 
     auto pub_e = std::chrono::system_clock::now();
     auto end_timer = std::chrono::system_clock::now();
+    
     auto dt_dilate = std::chrono::duration_cast<std::chrono::milliseconds>(dilate_e - dilate_s).count();
     auto dt_depth = std::chrono::duration_cast<std::chrono::milliseconds>(depth_e - depth_s).count();
     auto dt_pub = std::chrono::duration_cast<std::chrono::milliseconds>(pub_e - pub_s).count();
     auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(end_timer - start_timer).count();
     
-    RCLCPP_INFO(this->get_logger(), "dt = %ldms, dt_dilate = %ldms, dt_depth = %ldms, dt_pub = %ldms", dt, dt_dilate, dt_depth, dt_pub);
+    RCLCPP_INFO(this->get_logger(), "dt = %ldms; dt_dilate = %ldms; dt_depth = %ldms; dt_pub = %ldms;", dt, dt_dilate, dt_depth, dt_pub);
 }
 
 

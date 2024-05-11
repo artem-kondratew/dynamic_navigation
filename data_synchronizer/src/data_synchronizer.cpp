@@ -110,7 +110,7 @@ void DataSyncronizer::odomCallback(const sensor_msgs::msg::Image::ConstSharedPtr
     auto end_timer = std::chrono::system_clock::now();
     auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(end_timer - start_timer).count();
     
-    RCLCPP_INFO(this->get_logger(), "sync with odom created: %u:%u %u:%u %u:%u; dt = %ldms", msg.rgb.header.stamp.sec, msg.rgb.header.stamp.nanosec,
+    RCLCPP_INFO(this->get_logger(), "sync with odom created: %u:%u %u:%u %u:%u; dt = %ldms;", msg.rgb.header.stamp.sec, msg.rgb.header.stamp.nanosec,
     msg.depth.header.stamp.sec, msg.depth.header.stamp.nanosec, msg.odom.header.stamp.sec, msg.odom.header.stamp.nanosec, dt);
 }
 
@@ -128,7 +128,7 @@ void DataSyncronizer::noOdomCallback(const sensor_msgs::msg::Image::ConstSharedP
     auto end_timer = std::chrono::system_clock::now();
     auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(end_timer - start_timer).count();
     
-    RCLCPP_INFO(this->get_logger(), "sync without odom created: %u:%u %u:%u; dt = %ldms", msg.rgb.header.stamp.sec, msg.rgb.header.stamp.nanosec,
+    RCLCPP_INFO(this->get_logger(), "sync without odom created: %u:%u %u:%u; dt = %ldms;", msg.rgb.header.stamp.sec, msg.rgb.header.stamp.nanosec,
     msg.depth.header.stamp.sec, msg.depth.header.stamp.nanosec, dt);
 }
 
