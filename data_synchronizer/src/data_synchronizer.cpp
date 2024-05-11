@@ -121,6 +121,7 @@ void DataSyncronizer::noOdomCallback(const sensor_msgs::msg::Image::ConstSharedP
     auto msg = dynamic_nav_msgs::msg::YoloData();
     msg.rgb = *rgb;
     msg.depth = *depth;
+    msg.odom = nav_msgs::msg::Odometry();
 
     output_pub_->publish(msg);
     rgb_vis_pub_->publish(msg.rgb);
