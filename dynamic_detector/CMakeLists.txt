@@ -70,7 +70,7 @@ ament_target_dependencies(pc2_visualizer
 )
 
 install(DIRECTORY
-    src config
+    src config launch
     DESTINATION share/${PROJECT_NAME}
 )
 

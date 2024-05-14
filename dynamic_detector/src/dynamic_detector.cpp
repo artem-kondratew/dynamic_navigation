@@ -16,6 +16,7 @@
 #include <image_geometry/pinhole_camera_model.h>
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/image.hpp>
+#include <sensor_msgs/image_encodings.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 #include <visualization_msgs/msg/marker.hpp>
@@ -31,6 +32,7 @@ private:
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr box_pub_;
     rclcpp::Publisher<dynamic_nav_msgs::msg::ObstaclesFootprints>::SharedPtr obstacles_fp_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr bb_image_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr dyn_depth_pub_;
 
     image_geometry::PinholeCameraModel camera_model_;
     float range_max_;
@@ -46,7 +48,7 @@ private:
     std::vector<std::vector<cv::Point>> setImagePoints(std::vector<uint64_t>& boxes);
     cv::Mat extractDynamicDepth(const cv::Mat& depth, cv::Mat& mask, std::vector<std::vector<cv::Point>>& image_points);
     void depth2pc2(const sensor_msgs::msg::Image& depth_msg, sensor_msgs::msg::PointCloud2::SharedPtr point_cloud);
-    geometry_msgs::msg::Point quickConvert(const cv::Mat& depth, size_t x, size_t y);
+    geometry_msgs::msg::Point quickConvert(const cv::Mat& depth, size_t x, size_t y, float median_d = -1);
     float calcMedianDepth(cv::Mat& dynamic_depth, cv::Point ul, cv::Point lr);
     std::vector<std::vector<geometry_msgs::msg::Point>> getRealPoints(std::vector<std::vector<cv::Point>>& image_points, cv::Mat& dynamic_depth);
     std::vector<std::vector<geometry_msgs::msg::Point>> setRealBox(std::vector<std::vector<geometry_msgs::msg::Point>>& real_points);
@@ -69,6 +71,7 @@ DynamicDetector::DynamicDetector() : Node("dynamic_detector") {
     this->declare_parameter("box_topic", "");
     this->declare_parameter("obstacles_fp_topic", "");
     this->declare_parameter("bb_image_topic", "");
+    this->declare_parameter("dyn_depth_topic", "");
     this->declare_parameter("range_max", 0.0);
     this->declare_parameter("camera_link_optical_frame", "");
     this->declare_parameter("realsense", false);
@@ -78,6 +81,7 @@ DynamicDetector::DynamicDetector() : Node("dynamic_detector") {
     std::string box_topic = this->get_parameter("box_topic").as_string();
     std::string obstacles_fp_topic = this->get_parameter("obstacles_fp_topic").as_string();
     std::string bb_image_topic = this->get_parameter("bb_image_topic").as_string();
+    std::string dyn_depth_topic = this->get_parameter("dyn_depth_topic").as_string();
     range_max_ = this->get_parameter("range_max").as_double();
     camera_link_optical_frame_ = this->get_parameter("camera_link_optical_frame").as_string();
     realsense_ = this->get_parameter("realsense").as_bool();
@@ -87,16 +91,17 @@ DynamicDetector::DynamicDetector() : Node("dynamic_detector") {
     RCLCPP_INFO(this->get_logger(), "box_topic: '%s'", box_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "obstacles_fp_topic: '%s'", obstacles_fp_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "bb_image_topic: '%s'", bb_image_topic.c_str());
+    RCLCPP_INFO(this->get_logger(), "dyn_depth_topic: '%s'", dyn_depth_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "range_max: '%f'", range_max_);
     RCLCPP_INFO(this->get_logger(), "camera_link_optical_frame: '%s'", camera_link_optical_frame_.c_str());
     RCLCPP_INFO(this->get_logger(), "realsense: '%s'", realsense_ ? "true" : "false");
-
 
     input_sub_ = this->create_subscription<dynamic_nav_msgs::msg::DetectorData>(input_topic, 10, std::bind(&DynamicDetector::callback, this, _1));
     pc2_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(pc2_topic, 1);
     box_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(box_topic, 1);
     obstacles_fp_pub_ = this->create_publisher<dynamic_nav_msgs::msg::ObstaclesFootprints>(obstacles_fp_topic, 1);
     bb_image_pub_ = this->create_publisher<sensor_msgs::msg::Image>(bb_image_topic, 1);
+    dyn_depth_pub_ = this->create_publisher<sensor_msgs::msg::Image>(dyn_depth_topic, 1);
 }
 
 
@@ -155,7 +160,7 @@ cv::Mat DynamicDetector::extractDynamicDepth(const cv::Mat& depth, cv::Mat& mask
             __m128i reg_depth = _mm_loadu_si128((__m128i*)(realsense_depth_data + i)); // load depth to 16-bit uint avx
             __m256i reg_mask_epi32 = _mm256_cvtepu8_epi32(reg_mask); // convert 8-bit uint mask avx to 32-bit integer
             __m256i reg_depth_epi32 = _mm256_cvtepu16_epi32(reg_depth); // convert 16-bit uint depth avx to 32-bit integer
-            __m256i reg_cmp_res = _mm256_cmpeq_epi32(reg_mask_epi32, uint32_zeros); // compare 32-bit integer mask avx with zeros
+            __m256i reg_cmp_res = _mm256_cmpgt_epi32(reg_mask_epi32, uint32_zeros); // compare 32-bit integer mask avx with zeros
             reg_cmp_res = _mm256_srli_epi32(reg_cmp_res, 31); // -1 -> 1, 0 -> 0
             __m256 reg_cmp_res_float = _mm256_cvtepi32_ps(reg_cmp_res); // convert compare results from 32-bit integer to float
             __m256 reg_depth_float = _mm256_cvtepi32_ps(reg_depth_epi32); // convert 32-bit integer depth avx to float
@@ -230,8 +235,8 @@ void DynamicDetector::depth2pc2(const sensor_msgs::msg::Image& depth_msg, sensor
 }
 
 
-geometry_msgs::msg::Point DynamicDetector::quickConvert(const cv::Mat& depth, size_t x, size_t y) {
-    float d = depth.at<float>(y, x);
+geometry_msgs::msg::Point DynamicDetector::quickConvert(const cv::Mat& depth, size_t x, size_t y, float median_d) {
+    float d = median_d < 0 ? depth.at<float>(y, x) : median_d;
 
     if (!std::isfinite(d) || d > range_max_) {
         d = range_max_;
@@ -273,12 +278,12 @@ std::vector<std::vector<geometry_msgs::msg::Point>> DynamicDetector::getRealPoin
     for (size_t i = 0; i < image_points.size(); i++) {
         std::vector<cv::Point> image_pts = image_points[i];
         std::vector<geometry_msgs::msg::Point> real_pts;
-        float median = calcMedianDepth(dynamic_depth, image_pts[0], image_pts[3]);
+        float median_d = calcMedianDepth(dynamic_depth, image_pts[0], image_pts[3]);
         for (size_t j = 0; j < image_pts.size(); j++) {
-            geometry_msgs::msg::Point real_pt = quickConvert(dynamic_depth, image_pts[j].x, image_pts[j].y);
-            real_pt.z = median;
+            geometry_msgs::msg::Point real_pt = quickConvert(dynamic_depth, image_pts[j].x, image_pts[j].y, median_d);
             real_pts.push_back(real_pt);
-            // RCLCPP_INFO(this->get_logger(), "%lf %lf %lf", real_pt.x, real_pt.y, real_pt.z);
+            std::cout << image_pts[j].x << " " << image_pts[j].y << " " << dynamic_depth.at<float>(image_pts[j].y, image_pts[j].x) << std::endl;
+            std::cout << real_pt.x << " " << real_pt.y << " " << real_pt.z << std::endl;
         }
         real_points.push_back(real_pts);
     }
@@ -324,7 +329,9 @@ visualization_msgs::msg::Marker DynamicDetector::createBoxMsg(std::vector<std::v
     line_list.type = visualization_msgs::msg::Marker::LINE_LIST;
     line_list.scale.x = 0.01;
     line_list.color.b = 1.0; // blue
+    line_list.color.r = 1.0; // red
     line_list.color.a = 1.0; // alpha
+    line_list.lifetime.nanosec = 10 * 10e6;
 
     for (size_t i = 0; i < real_points.size(); i++) {
         std::vector<geometry_msgs::msg::Point> real_pts = real_points[i];
@@ -371,71 +378,9 @@ visualization_msgs::msg::Marker DynamicDetector::createBoxMsg(std::vector<std::v
 
 void DynamicDetector::drawBoxes(cv::Mat& image, std::vector<uint64_t>& boxes) {
     for (size_t i = 0; i < boxes.size(); i += 4) {
-        cv::rectangle(image, cv::Rect(cv::Point{int(boxes[i]), int(boxes[i+1])}, cv::Point{int(boxes[i+2]), int(boxes[i+3])}), {255, 0, 255}, 1);
+        cv::rectangle(image, cv::Rect(cv::Point{int(boxes[i]), int(boxes[i+1])}, cv::Point{int(boxes[i+2]), int(boxes[i+3])}), {255, 0, 255}, 2);
     }
 }
-
-
-// void DynamicDetector::callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr msg) {
-//     auto start_timer = std::chrono::system_clock::now();
-
-//     size_t obstacles_num = msg->boxes.size() / 4;
-//     RCLCPP_INFO(this->get_logger(), "%ld obstacle(s) detected", obstacles_num);
-
-//     auto rgb = cv_bridge::toCvCopy(msg->rgb)->image;
-//     auto depth = cv_bridge::toCvCopy(msg->depth)->image;
-//     auto mask = cv_bridge::toCvCopy(msg->mask)->image;
-
-//     size_t w = rgb.cols;
-//     size_t h = rgb.rows;
-//     size_t size = w * h;
-
-//     std::vector<uint64_t> boxes;
-//     boxes.resize(msg->boxes.size());
-//     std::memcpy(boxes.data(), msg->boxes.data(), msg->boxes.size() * sizeof(uint64_t));
-
-//     camera_model_.fromCameraInfo(msg->camera_info);
-
-//     auto start_proc = std::chrono::system_clock::now();
-
-//     std::vector<std::vector<cv::Point>> image_points = setImagePoints(boxes);
-//     cv::Mat dynamic_depth = extractDynamicDepth(depth, mask, image_points);
-
-//     auto start_depth = std::chrono::system_clock::now();
-//     // std::memcpy(msg->depth.data.data(), dynamic_depth.data, sizeof(float) * w * h);
-//     // sensor_msgs::msg::PointCloud2::SharedPtr point_cloud = std::make_shared<sensor_msgs::msg::PointCloud2>();
-//     // depth2pc2(msg->depth, point_cloud);
-//     // pc2_pub_->publish(*point_cloud);
-//     auto end_depth = std::chrono::system_clock::now();
-
-//     std::vector<std::vector<geometry_msgs::msg::Point>> front_real_points = getRealPoints(image_points, dynamic_depth);
-//     std::vector<std::vector<geometry_msgs::msg::Point>> real_points = setRealBox(front_real_points);
-
-//     visualization_msgs::msg::Marker line_list = createBoxMsg(real_points, image_points);
-
-//     auto obstacles_footprints = dynamic_nav_msgs::msg::ObstaclesFootprints();
-//     obstacles_footprints.count = obstacles_num;
-//     obstacles_footprints.points = box_points_;
-
-//     drawBoxes(rgb, boxes);
-//     auto rgb_msg = msg->rgb;
-//     std::memcpy(rgb_msg.data.data(), rgb.data, sizeof(uint8_t) * size * 3);
-
-//     box_pub_->publish(line_list);
-//     obstacles_fp_pub_->publish(obstacles_footprints);
-//     bb_image_pub_->publish(rgb_msg);
-
-//     box_points_ = std::vector<geometry_msgs::msg::Point>();
-
-//     auto end_timer = std::chrono::system_clock::now();
-//     auto dt_proc = std::chrono::duration_cast<std::chrono::milliseconds>(end_timer - start_proc).count();
-//     auto delta_depth = std::chrono::duration_cast<std::chrono::milliseconds>(end_depth - start_depth).count();
-//     auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(end_timer - start_timer).count();
-//     RCLCPP_INFO(this->get_logger(), "dt = %ld; dt_proc = %ld; dt_depth = %ld", dt, dt_proc, delta_depth);
-    
-//     cv::imshow("image", rgb);
-//     cv::waitKey(1);
-// }
 
 
 void DynamicDetector::callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr msg) {
@@ -473,10 +418,12 @@ void DynamicDetector::callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr ms
 
     drawBoxes(rgb->image, boxes);
     auto rgb_msg = rgb->toImageMsg();
+    auto depth_msg = cv_bridge::CvImage(msg->depth.header, sensor_msgs::image_encodings::TYPE_32FC1, dynamic_depth);
 
     box_pub_->publish(line_list);
     obstacles_fp_pub_->publish(obstacles_footprints);
     bb_image_pub_->publish(*rgb_msg);
+    dyn_depth_pub_->publish(*depth_msg.toImageMsg());
 
     box_points_ = std::vector<geometry_msgs::msg::Point>();
     auto pub_e = std::chrono::system_clock::now();

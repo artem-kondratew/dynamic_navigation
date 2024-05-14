@@ -38,6 +38,8 @@ private:
     rclcpp::Subscription<nav_msgs::msg::OccupancyGrid>::SharedPtr local_costmap_sub_;
     rclcpp::Publisher<dynamic_nav_msgs::msg::DynamicLayerMsg>::SharedPtr costmap_circles_pub_;
     rclcpp::Publisher<nav_msgs::msg::OccupancyGrid>::SharedPtr remap_lc_pub_;
+    rclcpp::Subscription<visualization_msgs::msg::Marker>::SharedPtr box_sub_;
+    rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr box_pub_;
 
     rclcpp::TimerBase::SharedPtr timer_;
     std::unique_ptr<tf2_ros::Buffer> tf_buffer_;
@@ -59,6 +61,7 @@ private:
     void mapCallback(const nav_msgs::msg::OccupancyGrid msg);
     void localCostmapCallback(const nav_msgs::msg::OccupancyGrid msg);
     void transformCallback();
+    void boxCallback(visualization_msgs::msg::Marker::SharedPtr msg);
 };
 
 
@@ -79,8 +82,8 @@ ObstaclesTracker::ObstaclesTracker() : Node("obstacles_tracker") {
     this->declare_parameter("unoccupied_value", 0);
     this->declare_parameter("occupied_value", 0);
     this->declare_parameter("unknown_value", 0);
-
-    
+    this->declare_parameter("box_sub_topic", "");
+    this->declare_parameter("box_pub_topic", "");
 
     std::string fp_topic = this->get_parameter("footprints_topic").as_string();
     std::string map_sub_topic = this->get_parameter("map_sub_topic").as_string();
@@ -95,6 +98,8 @@ ObstaclesTracker::ObstaclesTracker() : Node("obstacles_tracker") {
     MAP_UNOCCUPIED_ = this->get_parameter("unoccupied_value").as_int();
     MAP_OCCUPIED_ = this->get_parameter("occupied_value").as_int();
     MAP_UNKNOWN_ = this->get_parameter("unknown_value").as_int();
+    std::string box_sub_topic = this->get_parameter("box_sub_topic").as_string();
+    std::string box_pub_topic = this->get_parameter("box_pub_topic").as_string();
 
     RCLCPP_INFO(this->get_logger(), "footprints_topic: '%s'", fp_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "map_sub_topic: '%s'", map_sub_topic.c_str());
@@ -109,6 +114,8 @@ ObstaclesTracker::ObstaclesTracker() : Node("obstacles_tracker") {
     RCLCPP_INFO(this->get_logger(), "unoccupied_value: '%d'", MAP_UNOCCUPIED_);
     RCLCPP_INFO(this->get_logger(), "occupied_value: '%d'", MAP_OCCUPIED_);
     RCLCPP_INFO(this->get_logger(), "unknown_value: '%d'", MAP_UNKNOWN_);
+    RCLCPP_INFO(this->get_logger(), "box_sub_topic: '%s'", box_sub_topic.c_str());
+    RCLCPP_INFO(this->get_logger(), "box_pub_topic: '%s'", box_pub_topic.c_str());
 
     fp_sub_ = this->create_subscription<dynamic_nav_msgs::msg::ObstaclesFootprints>(fp_topic, 10, std::bind(&ObstaclesTracker::footprintsCallback, this, _1));
     map_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(map_sub_topic, 10, std::bind(&ObstaclesTracker::mapCallback, this, _1));
@@ -116,6 +123,8 @@ ObstaclesTracker::ObstaclesTracker() : Node("obstacles_tracker") {
     local_costmap_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(local_costmap_sub_topic, 10, std::bind(&ObstaclesTracker::localCostmapCallback, this, _1));
     costmap_circles_pub_ = this->create_publisher<dynamic_nav_msgs::msg::DynamicLayerMsg>(costmap_circles_topic, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().reliable());
     remap_lc_pub_ = this->create_publisher<nav_msgs::msg::OccupancyGrid>(remap_local_costmap_topic, rclcpp::QoS(rclcpp::KeepLast(1)).transient_local().best_effort());
+    box_sub_ = this->create_subscription<visualization_msgs::msg::Marker>(box_sub_topic, 10, std::bind(&ObstaclesTracker::boxCallback, this, _1));
+    box_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(box_pub_topic, 10);
 
     timer_ = this->create_wall_timer(10ms, std::bind(&ObstaclesTracker::transformCallback, this));
     tf_buffer_ = std::make_unique<tf2_ros::Buffer>(this->get_clock());
@@ -126,12 +135,12 @@ ObstaclesTracker::ObstaclesTracker() : Node("obstacles_tracker") {
 void ObstaclesTracker::footprintsCallback(const dynamic_nav_msgs::msg::ObstaclesFootprints msg) {
     auto start_timer = std::chrono::system_clock::now();
 
-    RCLCPP_INFO(this->get_logger(), "got %ld obstacle(s)", msg.count);
-
     if (map_img_.empty()) {
-        RCLCPP_WARN(this->get_logger(), "empty");
-        map_.header.stamp = this->get_clock()->now();
-        map_pub_->publish(map_);
+        RCLCPP_WARN(this->get_logger(), "static map is empty");
+        if (map_.data.size() > 0) {
+            map_.header.stamp = this->get_clock()->now();
+            map_pub_->publish(map_);
+        }
         return;
     }
 
@@ -166,7 +175,6 @@ void ObstaclesTracker::footprintsCallback(const dynamic_nav_msgs::msg::Obstacles
         float ry = std::abs(y - static_pt0.y());
         uint64_t r = static_cast<int>((std::sqrt(rx * rx + ry * ry) + obstacle_offset_) / resolution); // find obstacle footprint circle radius
         cv::Point center(static_cast<int>(x / resolution), static_cast<int>(y / resolution)); // find circle center
-        RCLCPP_INFO(this->get_logger(), "%lf %lf %lf", x, y, r * resolution);
         try {
             cv::circle(dynamic_map_img, center, r, {double(IMG_OCCUPIED_)}, cv::FILLED);
         }
@@ -215,7 +223,7 @@ void ObstaclesTracker::footprintsCallback(const dynamic_nav_msgs::msg::Obstacles
 
     auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(end_timer - start_timer).count();
     
-    RCLCPP_INFO(this->get_logger(), "dt = %ld;", dt);
+    RCLCPP_INFO(this->get_logger(), "got %ld obstacle(s); dt = %ld;", msg.count, dt);
 
     cv::flip(dynamic_map_img, dynamic_map_img, 1);
 
@@ -334,6 +342,32 @@ void ObstaclesTracker::transformCallback() {
     catch (const tf2::TransformException & ex) {
         RCLCPP_INFO(this->get_logger(), "Could not transform '%s' to '%s': %s", map_frame_.c_str(), odom_frame_.c_str(), ex.what());
     }
+}
+
+
+void ObstaclesTracker::boxCallback(visualization_msgs::msg::Marker::SharedPtr msg) {
+    if (map_img_.empty() || msg->points.size() == 0) {
+        return;
+    }
+
+    // static map's origin coordinates
+    tf2::Vector3 static_map_origin;
+    static_map_origin.setX(map_.info.origin.position.x);
+    static_map_origin.setY(map_.info.origin.position.y);
+    static_map_origin.setZ(map_.info.origin.position.z);
+
+    for (size_t i = 0; i < msg->points.size(); i++) {
+        tf2::Vector3 v(msg->points[i].x, msg->points[i].y, msg->points[i].z); // set points in camera_link_optical frame to tf2::Vector3
+        tf2::Vector3 pt = (map_tf_ * v); // transform points from camera_link_optical to static map's origin
+        msg->points[i].x = pt.getX();
+        msg->points[i].y = pt.getY();
+        msg->points[i].z = pt.getZ();
+    }
+
+    msg->header.frame_id = map_frame_;
+    msg->header.stamp = this->get_clock()->now();
+
+    box_pub_->publish(*msg);
 }
 
 
