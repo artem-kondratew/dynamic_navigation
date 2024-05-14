@@ -3,8 +3,8 @@ import os
 from setuptools import find_packages, setup
 from glob import glob
 
-package_name = 'motion_detector'
-submodules = 'motion_detector/submodules'
+package_name = 'yolo'
+submodules = 'yolo/submodules'
 
 setup(
     name=package_name,
@@ -25,9 +25,9 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'motion_detector = motion_detector.motion_detector:main',
-            'keypoints_visualizer = motion_detector.keypoints_visualizer:main',
-            'fake_fast_detector = motion_detector.fake_fast_detector:main'
+            'yolo = yolo.yolo_ros:main',
+            'keypoints_visualizer = yolo.keypoints_visualizer:main',
+            'fake_fast_detector = yolo.fake_fast_detector:main'
         ],
     },
 )

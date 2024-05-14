@@ -37,10 +37,6 @@ class KeypointsVisualizer(Node):
         msg.image = self.bridge_.cv2_to_imgmsg(image, encoding='passthrough')
         self.publisher_.publish(msg.image)
 
-        if False:
-            cv.imshow('result', image)
-            cv.waitKey(20)
-
 
 def main(args=None):
     rclpy.init(args=args)
