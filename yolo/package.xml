@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>motion_detector</name>
+  <name>yolo</name>
   <version>0.0.0</version>
   <description>Semantic segmentation for dynamic SLAM</description>
   <maintainer email="artemkondratev5@gmail.com">artem-kondratew</maintainer>

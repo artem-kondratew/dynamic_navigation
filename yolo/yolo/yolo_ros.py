@@ -18,10 +18,10 @@ from .submodules.yolo import Yolo
 from .submodules.yolo_classes import classes_list
 
 
-class MotionDetector(Node):
+class YoloRos(Node):
 
     def __init__(self):
-        super().__init__('motion_detector')
+        super().__init__('yolo')
         self.declare_parameters(namespace='', parameters=[('input_topic', ''),
                                                           ('output_topic', ''),
                                                           ('create_mask', True),
@@ -56,11 +56,7 @@ class MotionDetector(Node):
         cv_frame = self.bridge_.imgmsg_to_cv2(msg.rgb, desired_encoding='passthrough')
         boxes = []
 
-        # 0ms
-
         output = self.model_.run(cv_frame)
-
-        # 35ms
 
         success, mask = self.model_.merge_masks(output.masks)
         if not success or not self.create_mask_:
@@ -73,28 +69,14 @@ class MotionDetector(Node):
             msg.mask = self.bridge_.cv2_to_imgmsg(mask, encoding='passthrough')
             msg.boxes = boxes
 
-        # cv_frame = cv.resize(cv_frame, (320, 240), interpolation=cv.INTER_LINEAR)
-        # mask = cv.resize(mask, (320, 240), interpolation=cv.INTER_LINEAR)
-        # depth = cv.resize(self.bridge_.imgmsg_to_cv2(msg.depth, desired_encoding='passthrough'), (320, 240), interpolation=cv.INTER_LINEAR)
-
-        # msg.rgb = self.bridge_.cv2_to_imgmsg(cv_frame, encoding='passthrough')
-        # msg.mask = self.bridge_.cv2_to_imgmsg(mask, encoding='passthrough')
-        # msg.depth = self.bridge_.cv2_to_imgmsg(depth, encoding='passthrough')
-
         self.publisher_.publish(msg)
-
-        # cv.imshow('main_mask', mask)
-        # cv.imshow('frame', cv_frame)
-        # cv.imshow('depth', depth)
-        # cv.imshow('depth_masked', depth_masked)
-        # cv.waitKey(1)
 
         self.get_logger().info(f'dt = {int((time() - t) * 1000)}ms')
 
 
 def main(args=None):
     rclpy.init(args=args)
-    motion_detector = MotionDetector()
+    motion_detector = YoloRos()
     rclpy.spin(motion_detector)
     motion_detector.destroy_node()
     rclpy.shutdown()
