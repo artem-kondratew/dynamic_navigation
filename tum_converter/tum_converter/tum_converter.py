@@ -97,8 +97,11 @@ class TumConverter(Node):
             if len(t) != 2:
                 continue
             rgb = cv.imread(src + '/' + t[0][0])
+            # print(t[0][0].split('.'))
             rgb_msg : Image = bridge.cv2_to_imgmsg(rgb, encoding='bgr8')
-            rgb_msg.header.stamp = self.get_clock().now().to_msg()
+            rgb_msg.header.stamp.sec = int(t[0][0].split('.')[0][4:])
+            rgb_msg.header.stamp.nanosec = int(t[0][0].split('.')[1])
+            # print(rgb_msg.header.stamp.sec, rgb_msg.header.stamp.nanosec)
             rgb_msg.header.frame_id = 'openni_rgb_optical_frame'
             self.rgb_msgs.append(rgb_msg)
 
