@@ -23,7 +23,8 @@ def generate_launch_description():
         #   ('imu', '/imu/data'),
           ('rgb/image', '/rtabmap/yolo/rgb'),
           ('rgb/camera_info', '/rtabmap/yolo/camera_info'),
-          ('depth/image', '/rtabmap/yolo/depth')]
+          ('depth/image', '/rtabmap/yolo/depth'),
+          ('map', 'rtabmap/map')]
 
     return LaunchDescription([
 
