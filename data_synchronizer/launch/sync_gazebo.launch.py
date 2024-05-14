@@ -11,7 +11,7 @@ def generate_launch_description():
 
     package_name = 'data_synchronizer'
 
-    parameters = os.path.join(get_package_share_directory(package_name), 'config', 'params_gazebo.yaml')
+    parameters = [os.path.join(get_package_share_directory(package_name), 'config', 'params_gazebo.yaml')]
 
     data_synchronizer = Node(
         package=package_name,
