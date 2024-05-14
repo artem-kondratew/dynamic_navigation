@@ -265,7 +265,6 @@ float DynamicDetector::calcMedianDepth(cv::Mat& dynamic_depth, cv::Point ul, cv:
         return (array[n / 2 - 1] + array[n / 2]) / 2.0;
     }
     return array[n / 2];
-    return 0;
 }
 
 
