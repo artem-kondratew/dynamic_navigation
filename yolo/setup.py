@@ -25,7 +25,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'yolo = yolo.yolo_ros:main',
+            'motion_detector = yolo.motion_detector:main',
             'keypoints_visualizer = yolo.keypoints_visualizer:main',
             'fake_fast_detector = yolo.fake_fast_detector:main'
         ],

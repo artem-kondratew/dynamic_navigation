@@ -7,7 +7,7 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
 
-    package_name = 'motion_detector'
+    package_name = 'yolo'
 
     parameters = [os.path.join(get_package_share_directory(package_name), 'config', 'params.yaml')]
 
