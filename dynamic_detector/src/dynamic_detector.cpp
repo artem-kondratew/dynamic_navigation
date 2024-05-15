@@ -257,7 +257,7 @@ float DynamicDetector::calcMedianDepth(cv::Mat& dynamic_depth, cv::Point ul, cv:
 
     for (int y = ul.y; y < lr.y; y += 2) {
         for (int x = ul.x; x < lr.x; x += 2) {
-            float d = quickConvert(dynamic_depth, x, y).z;
+            float d = dynamic_depth.at<float>(y, x);
             if (d != 0) {
                 array.push_back(d);
             }
@@ -282,8 +282,6 @@ std::vector<std::vector<geometry_msgs::msg::Point>> DynamicDetector::getRealPoin
         for (size_t j = 0; j < image_pts.size(); j++) {
             geometry_msgs::msg::Point real_pt = quickConvert(dynamic_depth, image_pts[j].x, image_pts[j].y, median_d);
             real_pts.push_back(real_pt);
-            std::cout << image_pts[j].x << " " << image_pts[j].y << " " << dynamic_depth.at<float>(image_pts[j].y, image_pts[j].x) << std::endl;
-            std::cout << real_pt.x << " " << real_pt.y << " " << real_pt.z << std::endl;
         }
         real_points.push_back(real_pts);
     }
@@ -331,7 +329,7 @@ visualization_msgs::msg::Marker DynamicDetector::createBoxMsg(std::vector<std::v
     line_list.color.b = 1.0; // blue
     line_list.color.r = 1.0; // red
     line_list.color.a = 1.0; // alpha
-    line_list.lifetime.nanosec = 10 * 10e6;
+    line_list.lifetime.nanosec = 40 * 10e6;
 
     for (size_t i = 0; i < real_points.size(); i++) {
         std::vector<geometry_msgs::msg::Point> real_pts = real_points[i];
