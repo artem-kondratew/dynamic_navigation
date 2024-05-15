@@ -13,14 +13,15 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
     parameters=[{
+          'Kp/MaxFeatures' : '10000',
           'frame_id':'camera_link',
           'subscribe_depth':True,
           'subscribe_odom_info':False,
           'approx_sync':False,
-          'wait_imu_to_init':False,}]
+          'wait_imu_to_init':True,}]
 
     remappings=[
-        #   ('imu', '/imu/data'),
+          ('imu', '/imu/data'),
           ('rgb/image', '/rtabmap/yolo/rgb'),
           ('rgb/camera_info', '/rtabmap/yolo/camera_info'),
           ('depth/image', '/rtabmap/yolo/depth'),
