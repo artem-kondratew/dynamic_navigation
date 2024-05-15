@@ -194,12 +194,6 @@ void ObstaclesTracker::footprintsCallback(const dynamic_nav_msgs::msg::Obstacles
         dynamic_layer.obstacles.push_back(dynamic_obstacle);
     }
 
-    // auto fake_obstacle = dynamic_nav_msgs::msg::CostmapCircle();
-    // fake_obstacle.x = 2;
-    // fake_obstacle.y = 1;
-    // fake_obstacle.r = 0.5;
-    // dynamic_layer.obstacles.push_back(fake_obstacle);
-
     auto dynamic_map = map_;
 
     dynamic_map.header.stamp = this->get_clock()->now();
