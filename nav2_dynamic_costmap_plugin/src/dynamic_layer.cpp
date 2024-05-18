@@ -118,13 +118,9 @@ void DynamicLayer::updateCosts(nav2_costmap_2d::Costmap2D & master_grid, int /*m
         center.setZ(0);
 
         auto relative_center = center - origin;
-        RCLCPP_INFO(
-            rclcpp::get_logger("dynamic_layer"),
-            "get %ld obstacles: %lf %lf     %lf %lf",
-            obstacles_.obstacles.size(),
-            center.x(), center.y(),
-            relative_center.x(), relative_center.y()
-        );
+#if false
+        RCLCPP_INFO(rclcpp::get_logger("dynamic_layer"), "get %ld obstacles:");
+#endif
 
         int cx = static_cast<int>(relative_center.x() / resolution);
         int cy = static_cast<int>(relative_center.y() / resolution);
