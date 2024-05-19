@@ -19,6 +19,9 @@ from launch import LaunchDescription
 import launch_ros.actions
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from ament_index_python.packages import get_package_share_directory
 
 
 configurable_parameters = [{'name': 'camera_name',                  'default': 'camera', 'description': 'camera unique name'},
@@ -118,6 +121,27 @@ def launch_setup(context, *args, **kwargs):
                 output='screen',
                 arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')],
                 emulate_tty=True,
+                ),
+            launch_ros.actions.Node(
+                package='tf2_ros',
+                executable='static_transform_publisher',
+                name='realsense_static_transform_publisher',
+                arguments=[
+                    '--x', '0.1155',
+                    '--y', '0.0350',
+                    '--z', '0.2225',
+                    '--roll', '0.0',
+                    '--pitch', '0.0',
+                    '--yaw', '0.0',
+                    '--frame-id', 'base_link',
+                    '--child-frame-id', 'camera_link',
+                    ]
+                ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    [os.path.join(get_package_share_directory('data_synchronizer'), 'launch', 'sync_realsense.launch.py')]
+                    ),
+                launch_arguments={'use_sim_time': 'true'}.items()
                 )
         ]
     
