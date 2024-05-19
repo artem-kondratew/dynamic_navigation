@@ -78,7 +78,7 @@ DataSyncronizer::DataSyncronizer() : Node("data_synchronizer") {
     RCLCPP_INFO(this->get_logger(), "odom_topic: '%s'", odom_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "output_topic: '%s'", output_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "rgb_vis_topic: '%s'", rgb_vis_topic.c_str());
-    RCLCPP_INFO(this->get_logger(), "realsense: '%s' -> use_imu: '%s'", (realsense ? "true" : "false"), (realsense ? "true" : "false"));
+    RCLCPP_INFO(this->get_logger(), "realsense: '%s'", (realsense ? "true" : "false"));
 
     rmw_qos_profile_t qos = rmw_qos_profile_default;
     qos.depth = 10;
