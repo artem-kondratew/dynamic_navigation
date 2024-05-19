@@ -40,8 +40,9 @@ private:
 
     sensor_msgs::msg::CameraInfo::SharedPtr camera_info_;
     bool realsense_;
+    bool verbose_;
 
-    int check_input_t_ = 5;
+    int check_input_t_ = 5; // sec
     rclcpp::Time yolo_t_;
     rclcpp::Time info_t_;
 
@@ -65,6 +66,7 @@ YoloDispatcher::YoloDispatcher() : Node("yolo_dispatcher") {
     this->declare_parameter("odom_topic", "");
     this->declare_parameter("detector_topic", "");
     this->declare_parameter("realsense", false);
+    this->declare_parameter("verbose", true);
 
     std::string camera_info_input_topic = this->get_parameter("camera_info_input_topic").as_string();
     std::string camera_info_topic = this->get_parameter("camera_info_topic").as_string();
@@ -75,6 +77,7 @@ YoloDispatcher::YoloDispatcher() : Node("yolo_dispatcher") {
     std::string odom_topic = this->get_parameter("odom_topic").as_string();
     std::string detector_topic = this->get_parameter("detector_topic").as_string();
     realsense_ = this->get_parameter("realsense").as_bool();
+    verbose_ = this->get_parameter("verbose").as_bool();
 
     RCLCPP_INFO(this->get_logger(), "camera_info_input_topic: '%s'", camera_info_input_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "camera_info_topic: '%s'", camera_info_topic.c_str());
@@ -85,6 +88,7 @@ YoloDispatcher::YoloDispatcher() : Node("yolo_dispatcher") {
     RCLCPP_INFO(this->get_logger(), "odom_topic: '%s'", odom_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "detector_topic: '%s'", detector_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "realsense: '%s'", realsense_ ? "true" : "false");
+    RCLCPP_INFO(this->get_logger(), "verbose: '%s'", verbose_ ? "true" : "false");
 
     camera_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(camera_info_input_topic, 10, std::bind(&YoloDispatcher::cameraInfoCallback, this, _1));
     yolo_sub_ = this->create_subscription<dynamic_nav_msgs::msg::YoloData>(yolo_topic, 10, std::bind(&YoloDispatcher::yoloCallback, this, _1));
@@ -214,8 +218,9 @@ void YoloDispatcher::yoloCallback(dynamic_nav_msgs::msg::YoloData::SharedPtr msg
     auto dt_pub = std::chrono::duration_cast<std::chrono::milliseconds>(pub_e - pub_s).count();
     auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(end_timer - start_timer).count();
     
-    RCLCPP_INFO(this->get_logger(), "dt = %ldms; dt_dilate = %ldms; dt_depth = %ldms; dt_pub = %ldms;", dt, dt_dilate, dt_depth, dt_pub);
-
+    if (verbose_) {
+        RCLCPP_INFO(this->get_logger(), "dt = %ldms; dt_dilate = %ldms; dt_depth = %ldms; dt_pub = %ldms;", dt, dt_dilate, dt_depth, dt_pub);
+    }
     yolo_t_ = this->get_clock()->now();
 }
 
