@@ -84,7 +84,7 @@ void DynamicLayer::onFootprintChanged() {
 // Inside this method the costmap gradient is generated and is writing directly
 // to the resulting costmap master_grid without any merging with previous layers.
 void DynamicLayer::updateCosts(nav2_costmap_2d::Costmap2D & master_grid, int /*min_i*/, int /*min_j*/, int /*max_i*/, int /*max_j*/) {
-    if (!enabled_) {
+    if (!enabled_ || obstacles_.obstacles.size()) {
         return;
     }
 
@@ -93,15 +93,6 @@ void DynamicLayer::updateCosts(nav2_costmap_2d::Costmap2D & master_grid, int /*m
 
     cv::Mat map = cv::Mat::zeros({int(size_x), int(size_y)}, CV_8UC1);
     std::memcpy(map.data, master_grid.getCharMap(), sizeof(uint8_t) * size_x * size_y);
-
-    if (obstacles_.obstacles.size() == 0) {
-        img_ = map;
-        std::memcpy(img_.data, master_grid.getCharMap(), sizeof(uint8_t) * size_x * size_y);
-        cv::flip(img_, img_, 1);
-        cv::imshow("plugin", img_);
-        cv::waitKey(1);
-        return;
-    }
 
     // local_costmap's origin coordinates
     tf2::Vector3 origin;
@@ -118,9 +109,6 @@ void DynamicLayer::updateCosts(nav2_costmap_2d::Costmap2D & master_grid, int /*m
         center.setZ(0);
 
         auto relative_center = center - origin;
-#if false
-        RCLCPP_INFO(rclcpp::get_logger("dynamic_layer"), "get %ld obstacles:");
-#endif
 
         int cx = static_cast<int>(relative_center.x() / resolution);
         int cy = static_cast<int>(relative_center.y() / resolution);
@@ -131,10 +119,6 @@ void DynamicLayer::updateCosts(nav2_costmap_2d::Costmap2D & master_grid, int /*m
     }
 
     std::memcpy(master_grid.getCharMap(), map.data, sizeof(uint8_t) * size_x * size_y);
-
-    cv::flip(map, img_, 1);
-    cv::imshow("plugin", img_);
-    cv::waitKey(1);
 }
 
 
