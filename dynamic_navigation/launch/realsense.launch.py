@@ -133,7 +133,7 @@ def launch_setup(context, *args, **kwargs):
                     '--roll', '0.0',
                     '--pitch', '0.0',
                     '--yaw', '0.0',
-                    '--frame-id', 'base_link',
+                    '--frame-id', 'base_footprint',
                     '--child-frame-id', 'camera_link',
                     ]
                 ),
@@ -142,7 +142,20 @@ def launch_setup(context, *args, **kwargs):
                     [os.path.join(get_package_share_directory('data_synchronizer'), 'launch', 'sync_realsense.launch.py')]
                     ),
                 launch_arguments={'use_sim_time': 'true'}.items()
-                )
+                ),
+            
+            # Compute quaternion of the IMU
+            launch_ros.actions.Node(
+                package='imu_filter_madgwick', executable='imu_filter_madgwick_node', output='screen',
+                parameters=[{'use_mag': False, 
+                            'world_frame':'enu', 
+                            'publish_tf':False}],
+                remappings=[('imu/data_raw', '/camera/imu')]),
+        
+            # The IMU frame is missing in TF tree, add it:
+            launch_ros.actions.Node(
+                package='tf2_ros', executable='static_transform_publisher', output='screen',
+                arguments=['0', '0', '0', '0', '0', '0', 'camera_gyro_optical_frame', 'camera_imu_optical_frame']),
         ]
     
 def generate_launch_description():
