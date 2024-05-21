@@ -14,18 +14,24 @@ from launch_ros.actions import Node
 def generate_launch_description():
     parameters=[{
           'Kp/MaxFeatures' : '10000',
-          'frame_id':'base_link',
+          'frame_id':'base_footprint',
           'subscribe_depth':True,
           'subscribe_odom_info':False,
           'approx_sync':False,
-          'wait_imu_to_init':True,}]
+          'wait_imu_to_init':True,
+          'odom_frame_id' : 'vo',
+          'guess_frame_id' : 'odom',
+          'Vis/FeatureType' : '8',
+        }]
 
     remappings=[
           ('imu', '/imu/data'),
           ('rgb/image', '/rtabmap/yolo/rgb'),
           ('rgb/camera_info', '/rtabmap/yolo/camera_info'),
           ('depth/image', '/rtabmap/yolo/depth'),
-          ('map', 'rtabmap/map')]
+          ('map', 'rtabmap/map'),
+          ('odom', '/vo'),
+        ]
 
     return LaunchDescription([
 
@@ -40,21 +46,4 @@ def generate_launch_description():
             parameters=parameters,
             remappings=remappings,
             arguments=['-d']),
-
-        Node(
-            package='rtabmap_viz', executable='rtabmap_viz', output='screen',
-            parameters=parameters,
-            remappings=remappings),
-
-        Node(
-            package='imu_filter_madgwick', executable='imu_filter_madgwick_node', output='screen',
-            parameters=[{'use_mag': False, 
-                         'world_frame':'enu', 
-                         'publish_tf':False}],
-            remappings=[('imu/data_raw', '/camera/imu')]),
-        
-        # The IMU frame is missing in TF tree, add it:
-        Node(
-            package='tf2_ros', executable='static_transform_publisher', output='screen',
-            arguments=['0', '0', '0', '0', '0', '0', 'camera_gyro_optical_frame', 'camera_imu_optical_frame']),
     ])
