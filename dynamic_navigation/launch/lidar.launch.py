@@ -18,7 +18,7 @@ lidar_transform = Node(
         '--roll', '0.0',
         '--pitch', '0.0',
         '--yaw', '3.14',
-        '--frame-id', 'base_link',
+        '--frame-id', 'base_footprint',
         '--child-frame-id', 'laser',
     ]
 )
