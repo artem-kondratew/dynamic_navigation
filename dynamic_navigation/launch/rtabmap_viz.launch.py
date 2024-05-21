@@ -16,7 +16,8 @@ def generate_launch_description():
           ('rgb/camera_info', '/rtabmap/yolo/camera_info'),
           ('depth/image', '/rtabmap/yolo/depth'),
           ('map', 'rtabmap/map'),
-          ('odom', '/vo')]
+          ('odom', '/vo')
+          ]
 
     return LaunchDescription([
 
