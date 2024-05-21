@@ -21,7 +21,7 @@ class Yolo():
         self.classes = classes if classes != None else [0]
 
     def run(self, tensor : torch.Tensor):
-        return self.model.predict(source=tensor, classes=self.classes, save=False)[0]
+        return self.model.predict(source=tensor, classes=self.classes, save=False, conf=0.05)[0]
     
     def merge_masks(self, masks):
         if not masks:
