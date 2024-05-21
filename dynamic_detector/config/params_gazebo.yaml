@@ -19,6 +19,9 @@ obstacles_tracker:
         remap_local_costmap_topic: /dynamic_detector/local_costmap         # local_costmap in map frame
         box_sub_topic: /dynamic_detector/internal/boxes                    # 3d bounding boxes coordinates in camera_link_optical frame
         box_pub_topic: /dynamic_detector/boxes                             # 3d bounding boxes coordinates in map frame
+        goal_pose_topic: /goal_pose                                        # topic with goal_pose for nav2
+        nav2_cmd_vel_topic: /nav2_cmd_vel                                  # input topic with cmd_velocities from nav2
+        cmd_vel_topic: /cmd_vel                                            # output topic for drive_controller
         map_frame: map                                                     # slam's map frame
         odom_frame: odom                                                   # robot's odom frame
         camera_link_optical_frame: camera_link_optical                     # robot's camera_link_optical_frame
@@ -26,6 +29,8 @@ obstacles_tracker:
         unoccupied_value: 0                                                # unoccupied value in OccupancyGrid
         occupied_value: 100                                                # occupied value in OccupancyGrid
         unknown_value: -1                                                  # unknown value in OccupancyGrid
+        use_emergency_stop: true                                           # robot stops near dynamic objects if true
+        danger_distance: 0.5                                               # robot stops if distance to dynamic object is less than danger_distance
 
 pc2_visualizer:
     ros__parameters:

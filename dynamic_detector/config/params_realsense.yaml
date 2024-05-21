@@ -6,8 +6,7 @@ dynamic_detector:
         obstacles_fp_topic: /dynamic_detector/obstacles_footprints         # topic with dynamic obstacles footpints for tracking node
         bb_image_topic: /dynamic_detector/bb_image                         # topic with bounding boxes image
         dyn_depth_topic: /dynamic_detector/dyn_depth                       # topic with dynamic depth image
-        range_max: 10.0                                                    # depth camera max range
-        # map_frame: map                                                   # slam's map frame
+        range_max: 100.0                                                   # depth camera max range
         camera_link_optical_frame: camera_link_optical                     # robot's camera_link_optical_frame
         realsense: true                                                    # true if realsense is in use
 
@@ -20,14 +19,21 @@ obstacles_tracker:
         costmap_circles_topic: /dynamic_detector/local_costmap/obstacles   # topic with with dynamic obstacles footprint circles
         box_sub_topic: /dynamic_detector/internal/boxes                    # 3d bounding boxes coordinates in camera_link_optical frame
         box_pub_topic: /dynamic_detector/boxes                             # 3d bounding boxes coordinates in map frame
+        goal_pose_topic: /goal_pose                                        # topic with goal_pose for nav2
+        nav2_cmd_vel_topic: /nav2_cmd_vel                                  # input topic with cmd_velocities from nav2
+        cmd_vel_topic: /cmd_vel                                            # output topic for drive_controller
         remap_local_costmap_topic: /dynamic_detector/local_costmap         # local_costmap in map frame
         map_frame: map                                                     # slam's map frame
         odom_frame: odom                                                   # robot's odom frame
         camera_link_optical_frame: camera_color_optical_frame              # robot's camera_link_optical_frame
-        obstacle_offset: 0.05                                              # increases radius of dynamic obstacles footprint 
+        obstacle_offset: 0.0                                               # increases radius of dynamic obstacles footprint 
         unoccupied_value: 0                                                # unoccupied value in OccupancyGrid
         occupied_value: 100                                                # occupied value in OccupancyGrid
         unknown_value: -1                                                  # unknown value in OccupancyGrid
+        use_emergency_stop: true                                           # robot stops near dynamic objects if true
+        danger_distance: 0.3                                               # robot stops if distance to dynamic object is less than danger_distance
+        lidar_frame: laser                                                 # lidar frame
+        base_footprint_frame: base_footprint                               # base_footprint frame
 
 pc2_visualizer:
     ros__parameters:
