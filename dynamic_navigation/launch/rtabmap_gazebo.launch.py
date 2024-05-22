@@ -287,7 +287,8 @@ def launch_setup(context, *args, **kwargs):
                 "landmark_linear_variance": LaunchConfiguration('tag_linear_variance'),
                 "landmark_angular_variance": LaunchConfiguration('tag_angular_variance'),
                 "Mem/IncrementalMemory": ConditionalText("true", "false", IfCondition(PythonExpression(["'", LaunchConfiguration('localization'), "' != 'true'"]))._predicate_func(context)).perform(context),
-                "Mem/InitWMWithAllNodes": ConditionalText("true", "false", IfCondition(PythonExpression(["'", LaunchConfiguration('localization'), "' == 'true'"]))._predicate_func(context)).perform(context)
+                "Mem/InitWMWithAllNodes": ConditionalText("true", "false", IfCondition(PythonExpression(["'", LaunchConfiguration('localization'), "' == 'true'"]))._predicate_func(context)).perform(context),
+                "Grid/MaxObstacleHeight": "1.0",
             }],
             remappings=[
                 ("rgb/image", LaunchConfiguration('rgb_topic_relay')),
