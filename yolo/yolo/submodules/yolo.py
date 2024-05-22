@@ -21,8 +21,8 @@ class Yolo():
         self.classes = classes if classes != None else [0]
 
     def run(self, tensor : torch.Tensor):
-        return self.model.predict(source=tensor, classes=self.classes, save=False, conf=0.05)[0]
-    
+        return self.model.predict(source=tensor, classes=self.classes, save=False, conf=0.5)[0]
+
     def merge_masks(self, masks):
         if not masks:
             return False, None
@@ -31,3 +31,6 @@ class Yolo():
             cv_mask = mask.data[0].cpu().numpy() * np.uint8(255)
             main_mask = cv.bitwise_or(main_mask, cv_mask)
         return True, main_mask
+    
+    def get_boxes(self, yolo_boxes):
+        return [int(x) for box in yolo_boxes for x in box.xyxy.tolist()[0]]

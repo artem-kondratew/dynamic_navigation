@@ -10,8 +10,6 @@ import rclpy
 from rclpy.node import Node
 from cv_bridge import CvBridge
 
-from nav_msgs.msg import Odometry
-from sensor_msgs.msg import Image
 from dynamic_nav_msgs.msg import YoloData
 
 from .submodules.yolo import Yolo
@@ -44,17 +42,9 @@ class YoloRos(Node):
         self.empty_mask_ = np.zeros((self.h, self.w, 1), dtype='uint8')
         self.get_logger().info('model initialized')
 
-    def get_boxes_coordinates(self, boxes):
-        x = []
-        for box in boxes:
-            for v in box.xyxy.tolist()[0]:
-                x.append(int(v))
-        return x
-
     def callback(self, msg):
         t = time()
         cv_frame = self.bridge_.imgmsg_to_cv2(msg.rgb, desired_encoding='passthrough')
-        boxes = []
 
         output = self.model_.run(cv_frame)
 
@@ -65,9 +55,8 @@ class YoloRos(Node):
             if self.model_.gpu:
                 mask = mask[(self.w-self.h)//2:self.h+(self.w-self.h)//2, :]
             mask = cv.normalize(mask, None, 255, 0, cv.NORM_MINMAX, cv.CV_8U)
-            boxes = self.get_boxes_coordinates(output.boxes)
             msg.mask = self.bridge_.cv2_to_imgmsg(mask, encoding='passthrough')
-            msg.boxes = boxes
+            msg.boxes = self.model_.get_boxes(output.boxes)
 
         self.publisher_.publish(msg)
 
