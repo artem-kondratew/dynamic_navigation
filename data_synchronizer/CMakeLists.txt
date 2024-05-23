@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
-find_package(dynamic_nav_msgs REQUIRED)
+find_package(dynamic_nav_interfaces REQUIRED)
 find_package(message_filters REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
@@ -34,9 +34,9 @@ target_link_libraries(data_synchronizer ${OpenCV_LIBS})
 target_link_libraries(fake_realsense ${OpenCV_LIBS})
 target_link_libraries(yolo_dispatcher ${OpenCV_LIBS})
 
-ament_target_dependencies(data_synchronizer dynamic_nav_msgs message_filters nav_msgs rclcpp sensor_msgs)
+ament_target_dependencies(data_synchronizer dynamic_nav_interfaces message_filters nav_msgs rclcpp sensor_msgs)
 ament_target_dependencies(fake_realsense cv_bridge nav_msgs rclcpp sensor_msgs)
-ament_target_dependencies(yolo_dispatcher cv_bridge dynamic_nav_msgs nav_msgs rclcpp sensor_msgs)
+ament_target_dependencies(yolo_dispatcher cv_bridge dynamic_nav_interfaces nav_msgs rclcpp sensor_msgs)
 
 install(DIRECTORY
     src config launch

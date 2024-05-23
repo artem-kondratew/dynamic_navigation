@@ -13,7 +13,7 @@
   <test_depend>ament_lint_common</test_depend>
 
   <depend>cv_bridge</depend>
-  <depend>dynamic_nav_msgs</depend>
+  <depend>dynamic_nav_interfaces</depend>
   <depend>message_filters</depend>
   <depend>nav_msgs</depend>
   <depend>OpenCV</depend>
