@@ -10,7 +10,7 @@
 #include <nav2_costmap_2d/layer.hpp>
 #include <nav2_costmap_2d/layered_costmap.hpp>
 
-#include "dynamic_nav_msgs/msg/dynamic_layer_msg.hpp"
+#include "dynamic_nav_interfaces/msg/dynamic_layer_msg.hpp"
 
 
 namespace nav2_dynamic_costmap_plugin {
@@ -18,11 +18,11 @@ namespace nav2_dynamic_costmap_plugin {
 class DynamicLayer : public nav2_costmap_2d::Layer {
 private:
 
-    rclcpp::Subscription<dynamic_nav_msgs::msg::DynamicLayerMsg>::SharedPtr sub_;
+    rclcpp::Subscription<dynamic_nav_interfaces::msg::DynamicLayerMsg>::SharedPtr sub_;
 
     bool need_recalculation_; // Indicates that the entire gradient should be recalculated next time
 
-    dynamic_nav_msgs::msg::DynamicLayerMsg obstacles_;
+    dynamic_nav_interfaces::msg::DynamicLayerMsg obstacles_;
     cv::Mat img_;
 
     double last_min_x_, last_min_y_, last_max_x_, last_max_y_;
@@ -38,7 +38,7 @@ public:
     virtual bool isClearable() {return false;}
 
 private:
-    void callback(const dynamic_nav_msgs::msg::DynamicLayerMsg msg);
+    void callback(const dynamic_nav_interfaces::msg::DynamicLayerMsg msg);
 };
 
 }

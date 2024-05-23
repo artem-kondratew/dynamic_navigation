@@ -30,7 +30,7 @@ void DynamicLayer::onInitialize() {
     need_recalculation_ = true;
     current_ = true;
 
-    sub_ = node->create_subscription<dynamic_nav_msgs::msg::DynamicLayerMsg>(
+    sub_ = node->create_subscription<dynamic_nav_interfaces::msg::DynamicLayerMsg>(
         "/dynamic_detector/local_costmap/obstacles",
         10,
         std::bind(&DynamicLayer::callback, this, std::placeholders::_1)
@@ -122,7 +122,7 @@ void DynamicLayer::updateCosts(nav2_costmap_2d::Costmap2D & master_grid, int /*m
 }
 
 
-void DynamicLayer::callback(dynamic_nav_msgs::msg::DynamicLayerMsg msg) {
+void DynamicLayer::callback(dynamic_nav_interfaces::msg::DynamicLayerMsg msg) {
     // RCLCPP_INFO(rclcpp::get_logger("dynamic_layer"), "get %ld obstacle(s)", msg.count);
     obstacles_ = msg;
 }

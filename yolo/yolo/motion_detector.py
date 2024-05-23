@@ -10,7 +10,7 @@ import rclpy
 from rclpy.node import Node
 from cv_bridge import CvBridge
 
-from dynamic_nav_msgs.msg import YoloData
+from dynamic_nav_interfaces.msg import YoloData
 
 from .submodules.yolo import Yolo
 from .submodules.yolo_classes import classes_list

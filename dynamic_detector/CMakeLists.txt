@@ -9,7 +9,7 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=native")
 
 find_package(ament_cmake REQUIRED)
 find_package(cv_bridge REQUIRED)
-find_package(dynamic_nav_msgs REQUIRED)
+find_package(dynamic_nav_interfaces REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(image_geometry REQUIRED)
 find_package(nav_msgs REQUIRED)
@@ -17,12 +17,12 @@ find_package(nav2_msgs REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
+find_package(std_msgs REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(tf2_ros REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
 include_directories(${OpenCV_INCLUDE_DIRS})
-include_directories(include)
 
 add_executable(dynamic_detector
     src/dynamic_detector.cpp
@@ -42,7 +42,7 @@ target_link_libraries(pc2_visualizer ${OpenCV_LIBS})
 
 ament_target_dependencies(dynamic_detector
     cv_bridge
-    dynamic_nav_msgs
+    dynamic_nav_interfaces
     geometry_msgs
     image_geometry
     rclcpp
@@ -51,11 +51,12 @@ ament_target_dependencies(dynamic_detector
 )
 
 ament_target_dependencies(obstacles_tracker
-    dynamic_nav_msgs
+dynamic_nav_interfaces
     geometry_msgs
     nav_msgs
     nav2_msgs
     rclcpp
+    std_msgs
     tf2_geometry_msgs
     tf2_ros
     visualization_msgs
@@ -63,7 +64,7 @@ ament_target_dependencies(obstacles_tracker
 
 ament_target_dependencies(pc2_visualizer
     cv_bridge
-    dynamic_nav_msgs
+    dynamic_nav_interfaces
     image_geometry
     rclcpp
     sensor_msgs

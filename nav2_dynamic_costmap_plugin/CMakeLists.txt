@@ -8,7 +8,7 @@ if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
 endif()
 
 find_package(ament_cmake REQUIRED)
-find_package(dynamic_nav_msgs REQUIRED)
+find_package(dynamic_nav_interfaces REQUIRED)
 find_package(nav2_costmap_2d REQUIRED)
 find_package(OpenCV REQUIRED)
 find_package(pluginlib REQUIRED)
@@ -18,7 +18,7 @@ set(dep_pkgs
     rclcpp
     nav2_costmap_2d
     pluginlib
-    dynamic_nav_msgs)
+    dynamic_nav_interfaces)
 
 add_library(${lib_name} SHARED
     src/dynamic_layer.cpp)
