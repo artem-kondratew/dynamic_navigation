@@ -4,7 +4,7 @@ from launch_ros.actions import Node
 def generate_launch_description():
     parameters=[{
           'Kp/MaxFeatures' : '10000',
-          'frame_id':'base_link',
+          'frame_id':'base_footprint',
           'subscribe_depth':True,
           'subscribe_odom_info':False,
           'approx_sync':False,
