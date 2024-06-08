@@ -47,6 +47,7 @@ ament_target_dependencies(dynamic_detector
     image_geometry
     rclcpp
     sensor_msgs
+    std_msgs
     visualization_msgs
 )
 

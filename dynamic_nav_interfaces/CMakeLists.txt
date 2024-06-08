@@ -17,7 +17,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     "msg/DynamicLayerMsg.msg"
     "msg/ObstaclesFootprints.msg"
     "msg/YoloData.msg"
-    "srv/GoalPose.srv"
+    "msg/MinDistance.msg"
     DEPENDENCIES builtin_interfaces geometry_msgs nav_msgs sensor_msgs
 )
 

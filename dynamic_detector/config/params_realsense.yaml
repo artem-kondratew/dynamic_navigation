@@ -6,9 +6,11 @@ dynamic_detector:
         obstacles_fp_topic: /dynamic_detector/obstacles_footprints         # topic with dynamic obstacles footpints for tracking node
         bb_image_topic: /dynamic_detector/bb_image                         # topic with bounding boxes image
         dyn_depth_topic: /dynamic_detector/dyn_depth                       # topic with dynamic depth image
+        danger_distance_topic: /dynamic_controller/danger_distance         # topic with bool value if distance from dynamic controller danger
         range_max: 100.0                                                   # depth camera max range
         camera_link_optical_frame: camera_link_optical                     # robot's camera_link_optical_frame
         realsense: true                                                    # true if realsense is in use
+        use_lifetime: false                                                # use lifetime if true
 
 obstacles_tracker:
     ros__parameters:
@@ -23,6 +25,7 @@ obstacles_tracker:
         nav2_cmd_vel_topic: /nav2_cmd_vel                                  # input topic with cmd_velocities from nav2
         cmd_vel_topic: /cmd_vel                                            # output topic for drive_controller
         remap_local_costmap_topic: /dynamic_detector/local_costmap         # local_costmap in map frame
+        min_distance_topic: /dynamic_detector/min_distance                 # topic with min_distance to dynamic obstacles
         map_frame: map                                                     # slam's map frame
         odom_frame: odom                                                   # robot's odom frame
         camera_link_optical_frame: camera_color_optical_frame              # robot's camera_link_optical_frame
@@ -31,9 +34,12 @@ obstacles_tracker:
         occupied_value: 100                                                # occupied value in OccupancyGrid
         unknown_value: -1                                                  # unknown value in OccupancyGrid
         use_emergency_stop: true                                           # robot stops near dynamic objects if true
-        danger_distance: 0.3                                               # robot stops if distance to dynamic object is less than danger_distance
+        danger_distance: 1.0                                               # robot stops if distance to dynamic object is less than danger_distance
         lidar_frame: laser                                                 # lidar frame
         base_footprint_frame: base_footprint                               # base_footprint frame
+        lost_memory_time: 10                                               # time while lost dynamic obstacles are being displayed on map
+        use_lifetime: false                                                # use lifetime if true
+        bb_lifetime: 30                                                    # lifetime of 3d bounding box in ms
 
 pc2_visualizer:
     ros__parameters:

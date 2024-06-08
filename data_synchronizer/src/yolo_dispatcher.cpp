@@ -35,6 +35,7 @@ private:
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr mask_pub_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
     rclcpp::Publisher<dynamic_nav_interfaces::msg::DetectorData>::SharedPtr detector_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr real_mask_pub_;
 
     rclcpp::TimerBase::SharedPtr timer_;
 
@@ -65,6 +66,7 @@ YoloDispatcher::YoloDispatcher() : Node("yolo_dispatcher") {
     this->declare_parameter("mask_topic", "");
     this->declare_parameter("odom_topic", "");
     this->declare_parameter("detector_topic", "");
+    this->declare_parameter("real_mask_topic", "");
     this->declare_parameter("realsense", false);
     this->declare_parameter("verbose", true);
 
@@ -76,6 +78,7 @@ YoloDispatcher::YoloDispatcher() : Node("yolo_dispatcher") {
     std::string mask_topic = this->get_parameter("mask_topic").as_string();
     std::string odom_topic = this->get_parameter("odom_topic").as_string();
     std::string detector_topic = this->get_parameter("detector_topic").as_string();
+    std::string real_mask_topic = this->get_parameter("real_mask_topic").as_string();
     realsense_ = this->get_parameter("realsense").as_bool();
     verbose_ = this->get_parameter("verbose").as_bool();
 
@@ -87,6 +90,7 @@ YoloDispatcher::YoloDispatcher() : Node("yolo_dispatcher") {
     RCLCPP_INFO(this->get_logger(), "mask_topic: '%s'", mask_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "odom_topic: '%s'", odom_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "detector_topic: '%s'", detector_topic.c_str());
+    RCLCPP_INFO(this->get_logger(), "real_mask_topic: '%s'", real_mask_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "realsense: '%s'", realsense_ ? "true" : "false");
     RCLCPP_INFO(this->get_logger(), "verbose: '%s'", verbose_ ? "true" : "false");
 
@@ -98,6 +102,7 @@ YoloDispatcher::YoloDispatcher() : Node("yolo_dispatcher") {
     depth_pub_ = this->create_publisher<sensor_msgs::msg::Image>(depth_topic, 10);
     mask_pub_ = this->create_publisher<sensor_msgs::msg::Image>(mask_topic, 10);
     detector_pub_ = this->create_publisher<dynamic_nav_interfaces::msg::DetectorData>(detector_topic, 10);
+    real_mask_pub_ = this->create_publisher<sensor_msgs::msg::Image>(real_mask_topic, 10);
     if (!realsense_) {
         odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>(odom_topic, 10);
     }
@@ -194,7 +199,7 @@ void YoloDispatcher::yoloCallback(dynamic_nav_interfaces::msg::YoloData::SharedP
     rgb_pub_->publish(msg->rgb);
     depth_pub_->publish(static_depth);
     mask_pub_->publish(*mask_dilated->toImageMsg());
-
+    real_mask_pub_->publish(msg->mask);
     if (!realsense_) {
         msg->odom.header.stamp = msg->rgb.header.stamp;
         odom_pub_->publish(msg->odom);

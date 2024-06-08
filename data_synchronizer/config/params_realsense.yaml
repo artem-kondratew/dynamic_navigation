@@ -28,4 +28,5 @@ yolo_dispatcher:
         mask_topic: /rtabmap/yolo/mask                        # output topic with mask
         odom_topic: /rtabmap/yolo/odom                        # output topic with odom
         detector_topic: /dynamic_detector/input               # output topic with dynamic_depth, mask and bounding boxes
+        real_mask_topic: /rtabmap/yolo/real_mask              # output topic with mask of dynamic_obstacles shapes
         realsense: true                                       # true if realsense is in use

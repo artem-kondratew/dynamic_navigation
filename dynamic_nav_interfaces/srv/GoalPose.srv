@@ -1,3 +1,0 @@
-bool request
----
-geometry_msgs/PoseStamped goal_pose

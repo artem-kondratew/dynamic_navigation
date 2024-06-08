@@ -289,6 +289,8 @@ def launch_setup(context, *args, **kwargs):
                 "Mem/IncrementalMemory": ConditionalText("true", "false", IfCondition(PythonExpression(["'", LaunchConfiguration('localization'), "' != 'true'"]))._predicate_func(context)).perform(context),
                 "Mem/InitWMWithAllNodes": ConditionalText("true", "false", IfCondition(PythonExpression(["'", LaunchConfiguration('localization'), "' == 'true'"]))._predicate_func(context)).perform(context),
                 "Grid/MaxObstacleHeight": "1.0",
+                "RGBD/SavedLocalizationIgnored" : "false",
+                "Reg/Strategy" : "0",
             }],
             remappings=[
                 ("rgb/image", LaunchConfiguration('rgb_topic_relay')),
@@ -386,8 +388,8 @@ def generate_launch_description():
         # Arguments
         DeclareLaunchArgument('stereo', default_value='false', description='Use stereo input instead of RGB-D.'),
 
-        DeclareLaunchArgument('localization', default_value='false', description='Launch in localization mode.'),
-        DeclareLaunchArgument('rtabmap_viz',  default_value='t',  description='Launch RTAB-Map UI (optional).'),
+        DeclareLaunchArgument('localization', default_value='true', description='Launch in localization mode.'),
+        DeclareLaunchArgument('rtabmap_viz',  default_value='true',  description='Launch RTAB-Map UI (optional).'),
         DeclareLaunchArgument('rviz',         default_value='false', description='Launch RVIZ (optional).'),
 
         DeclareLaunchArgument('use_sim_time', default_value='true', description='Use simulation (Gazebo) clock if true'),
@@ -402,11 +404,11 @@ def generate_launch_description():
         DeclareLaunchArgument('map_frame_id',   default_value='map',                description='Output map frame id (TF).'),
         DeclareLaunchArgument('publish_tf_map', default_value='true',               description='Publish TF between map and odomerty.'),
         DeclareLaunchArgument('namespace',      default_value='rtabmap',            description=''),
-        DeclareLaunchArgument('database_path',  default_value='~/.ros/rtabmap.db',  description='Where is the map saved/loaded.'),
+        DeclareLaunchArgument('database_path',  default_value='~/.ros/gazebo.db',  description='Where is the map saved/loaded.'),
         DeclareLaunchArgument('queue_size',     default_value='10',                 description=''),
         DeclareLaunchArgument('qos',            default_value='2',                  description='General QoS used for sensor input data: 0=system default, 1=Reliable, 2=Best Effort.'),
         DeclareLaunchArgument('wait_for_transform', default_value='0.2',            description=''),
-        DeclareLaunchArgument('rtabmap_args',   default_value='',                 description='Backward compatibility, use "args" instead.'),
+        DeclareLaunchArgument('rtabmap_args',   default_value='--Optimizer/Strategy 2', description='Backward compatibility, use "args" instead.'),
         DeclareLaunchArgument('launch_prefix',  default_value='',                   description='For debugging purpose, it fills prefix tag of the nodes, e.g., "xterm -e gdb -ex run --args"'),
         DeclareLaunchArgument('output',         default_value='screen',             description='Control node output (screen or log).'),
         DeclareLaunchArgument('initial_pose',   default_value='',                   description='Set an initial pose (only in localization mode). Format: "x y z roll pitch yaw" or "x y z qx qy qz qw". Default: see "RGBD/StartAtOrigin" doc'),

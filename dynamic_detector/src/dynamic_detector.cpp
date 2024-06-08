@@ -19,18 +19,20 @@
 #include <sensor_msgs/image_encodings.hpp>
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
+#include <std_msgs/msg/bool.hpp>
 #include <visualization_msgs/msg/marker.hpp>
 
-#include "dynamic_nav_msgs/msg/obstacles_footprints.hpp"
-#include "dynamic_nav_msgs/msg/detector_data.hpp"
+#include "dynamic_nav_interfaces/msg/obstacles_footprints.hpp"
+#include "dynamic_nav_interfaces/msg/detector_data.hpp"
 
 
 class DynamicDetector : public rclcpp::Node {
 private:
-    rclcpp::Subscription<dynamic_nav_msgs::msg::DetectorData>::SharedPtr input_sub_;
+    rclcpp::Subscription<dynamic_nav_interfaces::msg::DetectorData>::SharedPtr input_sub_;
+    rclcpp::Subscription<std_msgs::msg::Bool>::SharedPtr danger_dist_sub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc2_pub_;
     rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr box_pub_;
-    rclcpp::Publisher<dynamic_nav_msgs::msg::ObstaclesFootprints>::SharedPtr obstacles_fp_pub_;
+    rclcpp::Publisher<dynamic_nav_interfaces::msg::ObstaclesFootprints>::SharedPtr obstacles_fp_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr bb_image_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr dyn_depth_pub_;
 
@@ -38,6 +40,11 @@ private:
     float range_max_;
     std::string camera_link_optical_frame_;
     bool realsense_;
+    bool verbose_;
+    const cv::Scalar red_ = {0, 0, 255};
+    const cv::Scalar magenta_ = {255, 0, 255};
+    cv::Scalar bb_color_;
+    bool use_lifetime_;
 
     std::vector<geometry_msgs::msg::Point> box_points_;
 
@@ -59,49 +66,62 @@ private:
 
     void drawBoxes(cv::Mat& image, std::vector<uint64_t>& boxes);
 
-    void callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr msg);
+    void callback(dynamic_nav_interfaces::msg::DetectorData::SharedPtr msg);
+    void dangerDistanceCallback(const std_msgs::msg::Bool msg);
 };
 
 
 DynamicDetector::DynamicDetector() : Node("dynamic_detector") {
     using std::placeholders::_1;
 
+    this->declare_parameter("verbose", true);
     this->declare_parameter("input_topic", "");
     this->declare_parameter("pc2_topic", "");
     this->declare_parameter("box_topic", "");
     this->declare_parameter("obstacles_fp_topic", "");
     this->declare_parameter("bb_image_topic", "");
     this->declare_parameter("dyn_depth_topic", "");
+    this->declare_parameter("danger_distance_topic", "");
     this->declare_parameter("range_max", 0.0);
     this->declare_parameter("camera_link_optical_frame", "");
     this->declare_parameter("realsense", false);
+    this->declare_parameter("use_lifetime", false);
 
+    verbose_ = this->get_parameter("verbose").as_bool();
     std::string input_topic = this->get_parameter("input_topic").as_string();
     std::string pc2_topic = this->get_parameter("pc2_topic").as_string();
     std::string box_topic = this->get_parameter("box_topic").as_string();
     std::string obstacles_fp_topic = this->get_parameter("obstacles_fp_topic").as_string();
     std::string bb_image_topic = this->get_parameter("bb_image_topic").as_string();
     std::string dyn_depth_topic = this->get_parameter("dyn_depth_topic").as_string();
+    std::string danger_distance_topic = this->get_parameter("danger_distance_topic").as_string();
     range_max_ = this->get_parameter("range_max").as_double();
     camera_link_optical_frame_ = this->get_parameter("camera_link_optical_frame").as_string();
     realsense_ = this->get_parameter("realsense").as_bool();
+    use_lifetime_ = this->get_parameter("use_lifetime").as_bool();
 
+    RCLCPP_INFO(this->get_logger(), "verbose: '%s'", verbose_ ? "true" : "false");
     RCLCPP_INFO(this->get_logger(), "input_topic: '%s'", input_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "pc2_topic: '%s'", pc2_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "box_topic: '%s'", box_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "obstacles_fp_topic: '%s'", obstacles_fp_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "bb_image_topic: '%s'", bb_image_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "dyn_depth_topic: '%s'", dyn_depth_topic.c_str());
+    RCLCPP_INFO(this->get_logger(), "danger_distance_topic: '%s'", danger_distance_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "range_max: '%f'", range_max_);
     RCLCPP_INFO(this->get_logger(), "camera_link_optical_frame: '%s'", camera_link_optical_frame_.c_str());
     RCLCPP_INFO(this->get_logger(), "realsense: '%s'", realsense_ ? "true" : "false");
+    RCLCPP_INFO(this->get_logger(), "use_lifetime: '%s'", use_lifetime_ ? "true" : "false");
 
-    input_sub_ = this->create_subscription<dynamic_nav_msgs::msg::DetectorData>(input_topic, 10, std::bind(&DynamicDetector::callback, this, _1));
+    input_sub_ = this->create_subscription<dynamic_nav_interfaces::msg::DetectorData>(input_topic, 10, std::bind(&DynamicDetector::callback, this, _1));
+    danger_dist_sub_ = this->create_subscription<std_msgs::msg::Bool>(danger_distance_topic, 10, std::bind(&DynamicDetector::dangerDistanceCallback, this, _1));
     pc2_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(pc2_topic, 1);
     box_pub_ = this->create_publisher<visualization_msgs::msg::Marker>(box_topic, 1);
-    obstacles_fp_pub_ = this->create_publisher<dynamic_nav_msgs::msg::ObstaclesFootprints>(obstacles_fp_topic, 1);
+    obstacles_fp_pub_ = this->create_publisher<dynamic_nav_interfaces::msg::ObstaclesFootprints>(obstacles_fp_topic, 1);
     bb_image_pub_ = this->create_publisher<sensor_msgs::msg::Image>(bb_image_topic, 1);
     dyn_depth_pub_ = this->create_publisher<sensor_msgs::msg::Image>(dyn_depth_topic, 1);
+
+    bb_color_ = magenta_;
 }
 
 
@@ -329,7 +349,9 @@ visualization_msgs::msg::Marker DynamicDetector::createBoxMsg(std::vector<std::v
     line_list.color.b = 1.0; // blue
     line_list.color.r = 1.0; // red
     line_list.color.a = 1.0; // alpha
-    line_list.lifetime.nanosec = 40 * 10e6;
+    if (!use_lifetime_) {
+        line_list.lifetime.nanosec = 40 /* ms */ * 10e6;
+    }
 
     for (size_t i = 0; i < real_points.size(); i++) {
         std::vector<geometry_msgs::msg::Point> real_pts = real_points[i];
@@ -376,12 +398,13 @@ visualization_msgs::msg::Marker DynamicDetector::createBoxMsg(std::vector<std::v
 
 void DynamicDetector::drawBoxes(cv::Mat& image, std::vector<uint64_t>& boxes) {
     for (size_t i = 0; i < boxes.size(); i += 4) {
-        cv::rectangle(image, cv::Rect(cv::Point{int(boxes[i]), int(boxes[i+1])}, cv::Point{int(boxes[i+2]), int(boxes[i+3])}), {255, 0, 255}, 2);
+        cv::rectangle(image, cv::Rect(cv::Point{int(boxes[i]), int(boxes[i+1])}, cv::Point{int(boxes[i+2]), int(boxes[i+3])}), bb_color_, 2);
     }
 }
 
 
-void DynamicDetector::callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr msg) {
+void DynamicDetector::callback(dynamic_nav_interfaces::msg::DetectorData::SharedPtr msg) {
+
     auto start_timer = std::chrono::system_clock::now();
     auto unpack_s = std::chrono::system_clock::now();
 
@@ -410,7 +433,7 @@ void DynamicDetector::callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr ms
     visualization_msgs::msg::Marker line_list = createBoxMsg(real_points, image_points);
 
     auto pub_s = std::chrono::system_clock::now();
-    auto obstacles_footprints = dynamic_nav_msgs::msg::ObstaclesFootprints();
+    auto obstacles_footprints = dynamic_nav_interfaces::msg::ObstaclesFootprints();
     obstacles_footprints.count = obstacles_num;
     obstacles_footprints.points = box_points_;
 
@@ -418,7 +441,9 @@ void DynamicDetector::callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr ms
     auto rgb_msg = rgb->toImageMsg();
     auto depth_msg = cv_bridge::CvImage(msg->depth.header, sensor_msgs::image_encodings::TYPE_32FC1, dynamic_depth);
 
-    box_pub_->publish(line_list);
+    if (!use_lifetime_ || (line_list.points.size() > 0)) {
+        box_pub_->publish(line_list);
+    }
     obstacles_fp_pub_->publish(obstacles_footprints);
     bb_image_pub_->publish(*rgb_msg);
     dyn_depth_pub_->publish(*depth_msg.toImageMsg());
@@ -434,7 +459,15 @@ void DynamicDetector::callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr ms
     auto dt_pub = std::chrono::duration_cast<std::chrono::milliseconds>(pub_e - pub_s).count();
     auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(end_timer - start_timer).count();
     
-    RCLCPP_INFO(this->get_logger(), "%ld obstacle(s) detected; dt = %ld; dt_unpack = %ld; dt_dd = %ld; f = %ld; dt_pub = %ld;", obstacles_num, dt, dt_unpack, dt_dd, f, dt_pub);
+    if (verbose_) {
+        RCLCPP_INFO(this->get_logger(), "%ld obstacle(s) detected; dt = %ld; dt_unpack = %ld; dt_dd = %ld; f = %ld; dt_pub = %ld;",
+        obstacles_num, dt, dt_unpack, dt_dd, f, dt_pub);
+    }
+}
+
+
+void DynamicDetector::dangerDistanceCallback(const std_msgs::msg::Bool msg) {
+    bb_color_ = msg.data ? red_ : magenta_;
 }
 
 
