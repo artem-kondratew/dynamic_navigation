@@ -17,8 +17,8 @@
 #include <sensor_msgs/msg/image.hpp>
 #include <sensor_msgs/image_encodings.hpp>
 
-#include "dynamic_nav_msgs/msg/detector_data.hpp"
-#include "dynamic_nav_msgs/msg/yolo_data.hpp"
+#include "dynamic_nav_interfaces/msg/detector_data.hpp"
+#include "dynamic_nav_interfaces/msg/yolo_data.hpp"
 
 
 using std::placeholders::_1;
@@ -27,21 +27,23 @@ using std::placeholders::_1;
 class YoloDispatcher : public rclcpp::Node {
 private:
     rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_sub_;
-    rclcpp::Subscription<dynamic_nav_msgs::msg::YoloData>::SharedPtr yolo_sub_;
+    rclcpp::Subscription<dynamic_nav_interfaces::msg::YoloData>::SharedPtr yolo_sub_;
     
     rclcpp::Publisher<sensor_msgs::msg::CameraInfo>::SharedPtr camera_info_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr rgb_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr depth_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr mask_pub_;
     rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
-    rclcpp::Publisher<dynamic_nav_msgs::msg::DetectorData>::SharedPtr detector_pub_;
+    rclcpp::Publisher<dynamic_nav_interfaces::msg::DetectorData>::SharedPtr detector_pub_;
+    rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr real_mask_pub_;
 
     rclcpp::TimerBase::SharedPtr timer_;
 
     sensor_msgs::msg::CameraInfo::SharedPtr camera_info_;
     bool realsense_;
+    bool verbose_;
 
-    int check_input_t_ = 5;
+    int check_input_t_ = 5; // sec
     rclcpp::Time yolo_t_;
     rclcpp::Time info_t_;
 
@@ -50,7 +52,7 @@ public:
 
 private:
     void cameraInfoCallback(const sensor_msgs::msg::CameraInfo::SharedPtr msg) {camera_info_ = msg; info_t_ = this->get_clock()->now();}
-    void yoloCallback(dynamic_nav_msgs::msg::YoloData::SharedPtr msg);
+    void yoloCallback(dynamic_nav_interfaces::msg::YoloData::SharedPtr msg);
     void timerCallback();
 };
 
@@ -64,7 +66,9 @@ YoloDispatcher::YoloDispatcher() : Node("yolo_dispatcher") {
     this->declare_parameter("mask_topic", "");
     this->declare_parameter("odom_topic", "");
     this->declare_parameter("detector_topic", "");
+    this->declare_parameter("real_mask_topic", "");
     this->declare_parameter("realsense", false);
+    this->declare_parameter("verbose", true);
 
     std::string camera_info_input_topic = this->get_parameter("camera_info_input_topic").as_string();
     std::string camera_info_topic = this->get_parameter("camera_info_topic").as_string();
@@ -74,7 +78,9 @@ YoloDispatcher::YoloDispatcher() : Node("yolo_dispatcher") {
     std::string mask_topic = this->get_parameter("mask_topic").as_string();
     std::string odom_topic = this->get_parameter("odom_topic").as_string();
     std::string detector_topic = this->get_parameter("detector_topic").as_string();
+    std::string real_mask_topic = this->get_parameter("real_mask_topic").as_string();
     realsense_ = this->get_parameter("realsense").as_bool();
+    verbose_ = this->get_parameter("verbose").as_bool();
 
     RCLCPP_INFO(this->get_logger(), "camera_info_input_topic: '%s'", camera_info_input_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "camera_info_topic: '%s'", camera_info_topic.c_str());
@@ -84,16 +90,19 @@ YoloDispatcher::YoloDispatcher() : Node("yolo_dispatcher") {
     RCLCPP_INFO(this->get_logger(), "mask_topic: '%s'", mask_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "odom_topic: '%s'", odom_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "detector_topic: '%s'", detector_topic.c_str());
+    RCLCPP_INFO(this->get_logger(), "real_mask_topic: '%s'", real_mask_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "realsense: '%s'", realsense_ ? "true" : "false");
+    RCLCPP_INFO(this->get_logger(), "verbose: '%s'", verbose_ ? "true" : "false");
 
     camera_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(camera_info_input_topic, 10, std::bind(&YoloDispatcher::cameraInfoCallback, this, _1));
-    yolo_sub_ = this->create_subscription<dynamic_nav_msgs::msg::YoloData>(yolo_topic, 10, std::bind(&YoloDispatcher::yoloCallback, this, _1));
+    yolo_sub_ = this->create_subscription<dynamic_nav_interfaces::msg::YoloData>(yolo_topic, 10, std::bind(&YoloDispatcher::yoloCallback, this, _1));
     
     camera_info_pub_ = this->create_publisher<sensor_msgs::msg::CameraInfo>(camera_info_topic, 10);
     rgb_pub_ = this->create_publisher<sensor_msgs::msg::Image>(rgb_topic, 10);
     depth_pub_ = this->create_publisher<sensor_msgs::msg::Image>(depth_topic, 10);
     mask_pub_ = this->create_publisher<sensor_msgs::msg::Image>(mask_topic, 10);
-    detector_pub_ = this->create_publisher<dynamic_nav_msgs::msg::DetectorData>(detector_topic, 10);
+    detector_pub_ = this->create_publisher<dynamic_nav_interfaces::msg::DetectorData>(detector_topic, 10);
+    real_mask_pub_ = this->create_publisher<sensor_msgs::msg::Image>(real_mask_topic, 10);
     if (!realsense_) {
         odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>(odom_topic, 10);
     }
@@ -107,7 +116,7 @@ YoloDispatcher::YoloDispatcher() : Node("yolo_dispatcher") {
 }
 
 
-void YoloDispatcher::yoloCallback(dynamic_nav_msgs::msg::YoloData::SharedPtr msg) {
+void YoloDispatcher::yoloCallback(dynamic_nav_interfaces::msg::YoloData::SharedPtr msg) {
     if (!camera_info_) {
         RCLCPP_WARN(this->get_logger(), "no camera_info");
         return;
@@ -190,14 +199,14 @@ void YoloDispatcher::yoloCallback(dynamic_nav_msgs::msg::YoloData::SharedPtr msg
     rgb_pub_->publish(msg->rgb);
     depth_pub_->publish(static_depth);
     mask_pub_->publish(*mask_dilated->toImageMsg());
-
+    real_mask_pub_->publish(msg->mask);
     if (!realsense_) {
         msg->odom.header.stamp = msg->rgb.header.stamp;
         odom_pub_->publish(msg->odom);
     }
     
     // send obstacles_tracker data
-    auto detector_data = dynamic_nav_msgs::msg::DetectorData();
+    auto detector_data = dynamic_nav_interfaces::msg::DetectorData();
     detector_data.camera_info = *camera_info_;
     detector_data.rgb = msg->rgb;
     detector_data.depth = msg->depth;
@@ -214,8 +223,9 @@ void YoloDispatcher::yoloCallback(dynamic_nav_msgs::msg::YoloData::SharedPtr msg
     auto dt_pub = std::chrono::duration_cast<std::chrono::milliseconds>(pub_e - pub_s).count();
     auto dt = std::chrono::duration_cast<std::chrono::milliseconds>(end_timer - start_timer).count();
     
-    RCLCPP_INFO(this->get_logger(), "dt = %ldms; dt_dilate = %ldms; dt_depth = %ldms; dt_pub = %ldms;", dt, dt_dilate, dt_depth, dt_pub);
-
+    if (verbose_) {
+        RCLCPP_INFO(this->get_logger(), "dt = %ldms; dt_dilate = %ldms; dt_depth = %ldms; dt_pub = %ldms;", dt, dt_dilate, dt_depth, dt_pub);
+    }
     yolo_t_ = this->get_clock()->now();
 }
 

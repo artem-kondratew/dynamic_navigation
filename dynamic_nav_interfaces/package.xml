@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
 <package format="3">
-  <name>dynamic_nav_msgs</name>
+  <name>dynamic_nav_interfaces</name>
   <version>0.0.0</version>
   <description>package with msgs for dynamic navigation system</description>
   <maintainer email="artemkondratev5@gmail.com">user</maintainer>

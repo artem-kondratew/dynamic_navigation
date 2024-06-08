@@ -1,6 +1,6 @@
 data_synchronizer:
     ros__parameters:
-        verbose: true                                         # printing info about syncs if true
+        verbose: false                                         # printing info about syncs if true
         rgb_topic: /camera/color/image_raw                    # input topic with rgb image
         depth_topic: /camera/aligned_depth_to_color/image_raw # input topic with aligned to color depth image
         output_topic: /yolo/input                             # output topic for communication with yolo node
@@ -9,7 +9,7 @@ data_synchronizer:
 
 fake_realsense:
     ros__parameters:
-        verbose: true                                         # printing info about syncs if true
+        verbose: false                                        # printing info about syncs if true
         camera_info_topic: /camera/color/camera_info          # output topic with fake camera_info
         rgb_topic: /camera/color/image_raw                    # output topic with fake rgb image
         depth_topic: /camera/aligned_depth_to_color/image_raw # output topic with fake depth image
@@ -19,7 +19,7 @@ fake_realsense:
 
 yolo_dispatcher:
     ros__parameters:
-        verbose: true                                         # printing info about time if true
+        verbose: false                                        # printing info about time if true
         camera_info_input_topic: /camera/color/camera_info    # input topic with camera_info
         camera_info_topic: /rtabmap/yolo/camera_info          # input topic with camera_info
         yolo_topic: /yolo/output                              # input topic with prediction from yolo
@@ -28,4 +28,5 @@ yolo_dispatcher:
         mask_topic: /rtabmap/yolo/mask                        # output topic with mask
         odom_topic: /rtabmap/yolo/odom                        # output topic with odom
         detector_topic: /dynamic_detector/input               # output topic with dynamic_depth, mask and bounding boxes
+        real_mask_topic: /rtabmap/yolo/real_mask              # output topic with mask of dynamic_obstacles shapes
         realsense: true                                       # true if realsense is in use

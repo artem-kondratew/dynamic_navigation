@@ -18,12 +18,12 @@
 #include <sensor_msgs/msg/point_cloud2.hpp>
 #include <sensor_msgs/point_cloud2_iterator.hpp>
 
-#include "dynamic_nav_msgs/msg/detector_data.hpp"
+#include "dynamic_nav_interfaces/msg/detector_data.hpp"
 
 
 class Visualizer : public rclcpp::Node {
 private:
-    rclcpp::Subscription<dynamic_nav_msgs::msg::DetectorData>::SharedPtr input_sub_;
+    rclcpp::Subscription<dynamic_nav_interfaces::msg::DetectorData>::SharedPtr input_sub_;
     rclcpp::Publisher<sensor_msgs::msg::PointCloud2>::SharedPtr pc2_pub_;
 
     image_geometry::PinholeCameraModel camera_model_;
@@ -37,7 +37,7 @@ private:
     cv::Mat extractDynamicDepth(const cv::Mat& depth, cv::Mat& mask);
     void depth2pc2(const sensor_msgs::msg::Image& depth_msg, sensor_msgs::msg::PointCloud2::SharedPtr point_cloud);
 
-    void callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr msg);
+    void callback(dynamic_nav_interfaces::msg::DetectorData::SharedPtr msg);
 };
 
 
@@ -60,7 +60,7 @@ Visualizer::Visualizer() : Node("pc2_visualizer") {
     RCLCPP_INFO(this->get_logger(), "camera_link_optical_frame: '%s'", camera_link_optical_frame_.c_str());
 
 
-    input_sub_ = this->create_subscription<dynamic_nav_msgs::msg::DetectorData>(input_topic, 1, std::bind(&Visualizer::callback, this, _1));
+    input_sub_ = this->create_subscription<dynamic_nav_interfaces::msg::DetectorData>(input_topic, 1, std::bind(&Visualizer::callback, this, _1));
     pc2_pub_ = this->create_publisher<sensor_msgs::msg::PointCloud2>(pc2_topic, 1);
 }
 
@@ -135,7 +135,7 @@ void Visualizer::depth2pc2(const sensor_msgs::msg::Image& depth_msg, sensor_msgs
 }
 
 
-void Visualizer::callback(dynamic_nav_msgs::msg::DetectorData::SharedPtr msg) {
+void Visualizer::callback(dynamic_nav_interfaces::msg::DetectorData::SharedPtr msg) {
     auto start_timer = std::chrono::system_clock::now();
 
     cv::Mat depth = cv_bridge::toCvCopy(msg->depth)->image;

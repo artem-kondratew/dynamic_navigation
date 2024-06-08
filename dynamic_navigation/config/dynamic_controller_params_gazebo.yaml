@@ -1,0 +1,13 @@
+dynamic_controller:
+    ros__parameters:
+        verbose: true                                              # printing info about controller states if true
+        goal_pose_topic: /goal_pose                                # topic with goal_pose for nav2
+        min_distance_topic: /dynamic_detector/min_distance         # output topic with min_distance to dynamic_obstacles
+        nav2_cmd_vel_topic: /nav2_cmd_vel                          # output topic for drive_controller
+        cmd_vel_topic: /cmd_vel                                    # output topic for drive_controller
+        danger_distance_topic: /dynamic_controller/danger_distance # topic with bool value if distance danger
+        use_emergency_stop: true                                   # robot stops near dynamic objects if true
+        danger_distance: 1.0                                       # robot stops if distance to dynamic object is less than danger_distance
+        danger_angle: 18.0                                         # robot stops if angle to dynamic object is less than danger_angle (degrees)
+        wait_time: 2000                                            # time for waiting danger obstacle moving in milliseconds
+        backward_linear_vel: -0.20                                 # linear x velocity for moving backward in recovery

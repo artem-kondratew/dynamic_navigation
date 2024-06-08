@@ -14,11 +14,15 @@
 
   <depend>data_synchronizer</depend>
   <depend>dynamic_detector</depend>
-  <depend>dynamic_nav_msgs</depend>
+  <depend>dynamic_nav_interfaces</depend>
+  <depend>geometry_msgs</depend>
   <depend>motion_detector</depend>
   <depend>nav2_dynamic_costmap_plugin</depend>
+  <depend>nav2_msgs</depend>
+  <depend>rclcpp</depend>
   <depend>rtabmap</depend>
   <depend>rtabmap_ros</depend>
+  <depend>std_msgs</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

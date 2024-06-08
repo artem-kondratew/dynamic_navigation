@@ -19,6 +19,9 @@ from launch import LaunchDescription
 import launch_ros.actions
 from launch.actions import DeclareLaunchArgument, OpaqueFunction
 from launch.substitutions import LaunchConfiguration
+from launch.actions import IncludeLaunchDescription
+from launch.launch_description_sources import PythonLaunchDescriptionSource
+from ament_index_python.packages import get_package_share_directory
 
 
 configurable_parameters = [{'name': 'camera_name',                  'default': 'camera', 'description': 'camera unique name'},
@@ -30,9 +33,9 @@ configurable_parameters = [{'name': 'camera_name',                  'default': '
                            {'name': 'json_file_path',               'default': "''", 'description': 'allows advanced configuration'},
                            {'name': 'log_level',                    'default': 'info', 'description': 'debug log level [DEBUG|INFO|WARN|ERROR|FATAL]'},
                            {'name': 'output',                       'default': 'screen', 'description': 'pipe node output [screen|log]'},
-                           {'name': 'depth_module.profile',         'default': '0,0,0', 'description': 'depth module profile'},                           
+                           {'name': 'depth_module.profile',         'default': '640,480,15', 'description': 'depth module profile'},                           
                            {'name': 'enable_depth',                 'default': 'true', 'description': 'enable depth stream'},
-                           {'name': 'rgb_camera.profile',           'default': '0,0,0', 'description': 'color image width'},
+                           {'name': 'rgb_camera.profile',           'default': '1920,1080,15', 'description': 'color image width'},
                            {'name': 'rgb_camera.enable_auto_exposure', 'default': 'true', 'description': 'enable/disable auto exposure for color image'},
                            {'name': 'enable_color',                 'default': 'true', 'description': 'enable color stream'},
                            {'name': 'enable_infra1',                'default': 'false', 'description': 'enable infra1 stream'},
@@ -118,7 +121,41 @@ def launch_setup(context, *args, **kwargs):
                 output='screen',
                 arguments=['--ros-args', '--log-level', LaunchConfiguration('log_level')],
                 emulate_tty=True,
-                )
+                ),
+            launch_ros.actions.Node(
+                package='tf2_ros',
+                executable='static_transform_publisher',
+                name='realsense_static_transform_publisher',
+                arguments=[
+                    '--x', '0.1155',
+                    '--y', '0.0350',
+                    '--z', '0.2225',
+                    '--roll', '0.0',
+                    '--pitch', '0.0',
+                    '--yaw', '0.0',
+                    '--frame-id', 'base_footprint',
+                    '--child-frame-id', 'camera_link',
+                    ]
+                ),
+            IncludeLaunchDescription(
+                PythonLaunchDescriptionSource(
+                    [os.path.join(get_package_share_directory('data_synchronizer'), 'launch', 'sync_realsense.launch.py')]
+                    ),
+                launch_arguments={'use_sim_time': 'true'}.items()
+                ),
+            
+            # Compute quaternion of the IMU
+            launch_ros.actions.Node(
+                package='imu_filter_madgwick', executable='imu_filter_madgwick_node', output='screen',
+                parameters=[{'use_mag': False, 
+                            'world_frame':'enu', 
+                            'publish_tf':False}],
+                remappings=[('imu/data_raw', '/camera/imu')]),
+        
+            # The IMU frame is missing in TF tree, add it:
+            launch_ros.actions.Node(
+                package='tf2_ros', executable='static_transform_publisher', output='screen',
+                arguments=['0', '0', '0', '0', '0', '0', 'camera_gyro_optical_frame', 'camera_imu_optical_frame']),
         ]
     
 def generate_launch_description():

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(dynamic_nav_msgs)
+project(dynamic_nav_interfaces)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -17,6 +17,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
     "msg/DynamicLayerMsg.msg"
     "msg/ObstaclesFootprints.msg"
     "msg/YoloData.msg"
+    "msg/MinDistance.msg"
     DEPENDENCIES builtin_interfaces geometry_msgs nav_msgs sensor_msgs
 )
 

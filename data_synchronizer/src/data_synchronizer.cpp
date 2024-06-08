@@ -14,7 +14,7 @@
 #include <message_filters/sync_policies/approximate_time.h>
 #include <message_filters/synchronizer.h>
 
-#include "dynamic_nav_msgs/msg/yolo_data.hpp"
+#include "dynamic_nav_interfaces/msg/yolo_data.hpp"
 
 
 class DataSyncronizer : public rclcpp::Node {
@@ -29,7 +29,7 @@ private:
     message_filters::Subscriber<sensor_msgs::msg::Image> depth_sub_;
     message_filters::Subscriber<nav_msgs::msg::Odometry> odom_sub_;
 
-    rclcpp::Publisher<dynamic_nav_msgs::msg::YoloData>::SharedPtr output_pub_;
+    rclcpp::Publisher<dynamic_nav_interfaces::msg::YoloData>::SharedPtr output_pub_;
     rclcpp::Publisher<sensor_msgs::msg::Image>::SharedPtr rgb_vis_pub_;
 
     rclcpp::TimerBase::SharedPtr timer_;
@@ -78,7 +78,7 @@ DataSyncronizer::DataSyncronizer() : Node("data_synchronizer") {
     RCLCPP_INFO(this->get_logger(), "odom_topic: '%s'", odom_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "output_topic: '%s'", output_topic.c_str());
     RCLCPP_INFO(this->get_logger(), "rgb_vis_topic: '%s'", rgb_vis_topic.c_str());
-    RCLCPP_INFO(this->get_logger(), "realsense: '%s' -> use_imu: '%s'", (realsense ? "true" : "false"), (realsense ? "true" : "false"));
+    RCLCPP_INFO(this->get_logger(), "realsense: '%s'", (realsense ? "true" : "false"));
 
     rmw_qos_profile_t qos = rmw_qos_profile_default;
     qos.depth = 10;
@@ -101,7 +101,7 @@ DataSyncronizer::DataSyncronizer() : Node("data_synchronizer") {
         RCLCPP_INFO(this->get_logger(), "setting realsense callback");
     }
     
-    output_pub_ = this->create_publisher<dynamic_nav_msgs::msg::YoloData>(output_topic, 10);
+    output_pub_ = this->create_publisher<dynamic_nav_interfaces::msg::YoloData>(output_topic, 10);
     rgb_vis_pub_ = this->create_publisher<sensor_msgs::msg::Image>(rgb_vis_topic, 10);
 
     timer_ = this->create_wall_timer(std::chrono::seconds(check_input_t_), std::bind(&DataSyncronizer::timerCallback, this));
@@ -116,7 +116,7 @@ void DataSyncronizer::odomCallback(const sensor_msgs::msg::Image::ConstSharedPtr
                                const sensor_msgs::msg::Image::ConstSharedPtr depth, const nav_msgs::msg::Odometry::ConstSharedPtr odom) {
     auto start_timer = std::chrono::system_clock::now();
 
-    auto msg = dynamic_nav_msgs::msg::YoloData();
+    auto msg = dynamic_nav_interfaces::msg::YoloData();
     msg.rgb = *rgb;
     msg.depth = *depth;
     msg.odom = *odom;
@@ -139,7 +139,7 @@ void DataSyncronizer::odomCallback(const sensor_msgs::msg::Image::ConstSharedPtr
 void DataSyncronizer::cameraCallback(const sensor_msgs::msg::Image::ConstSharedPtr rgb, const sensor_msgs::msg::Image::ConstSharedPtr depth) {  
     auto start_timer = std::chrono::system_clock::now();
 
-    auto msg = dynamic_nav_msgs::msg::YoloData();
+    auto msg = dynamic_nav_interfaces::msg::YoloData();
     msg.rgb = *rgb;
     msg.depth = *depth;
     msg.odom = nav_msgs::msg::Odometry();
