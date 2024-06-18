@@ -1,0 +1,3 @@
+[submodule "rtabmap"]
+	path = rtabmap
+	url = git@github.com:artem-kondratew/rtabmap.git
