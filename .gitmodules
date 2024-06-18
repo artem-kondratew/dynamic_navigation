@@ -1,0 +1,9 @@
+[submodule "rtabmap"]
+	path = rtabmap
+	url = git@github.com:artem-kondratew/rtabmap.git
+[submodule "rtabmap_ros"]
+	path = rtabmap_ros
+	url = git@github.com:artem-kondratew/rtabmap_ros.git
+[submodule "robot"]
+	path = robot
+	url = git@github.com:artem-kondratew/robot.git
